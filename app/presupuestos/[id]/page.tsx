@@ -22,6 +22,17 @@ import {
 import { toast } from 'sonner'
 import { GeneradorPlano } from '../nuevo/components/GeneradorPlano'
 import type { Habitacion } from '../nuevo/components/FormHabitaciones'
+import dynamic from 'next/dynamic'
+
+// Cargar PDF dinámicamente para reducir bundle size
+const PDFDownloadLink = dynamic(
+  () => import('@react-pdf/renderer').then((mod) => mod.PDFDownloadLink),
+  { ssr: false }
+)
+const PresupuestoPDF = dynamic(
+  () => import('@/components/pdf/PresupuestoPDF').then((mod) => mod.PresupuestoPDF),
+  { ssr: false }
+)
 
 interface PresupuestoDetalle {
   id: string
@@ -402,15 +413,43 @@ export default function PresupuestoDetallePage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver a Presupuestos
           </Button>
-          <Button
-            className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all"
-            onClick={() => {
-              toast.info('Generación de PDF en desarrollo')
-            }}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Descargar PDF Completo
-          </Button>
+          
+          {presupuesto && (
+            <PDFDownloadLink
+              document={<PresupuestoPDF datos={{
+                cliente: presupuesto.cliente,
+                obra: {
+                  tipo: presupuesto.tipoObra,
+                  descripcion: presupuesto.descripcionObra
+                },
+                espacio: {
+                  metrosTotales: presupuesto.total.toString(), // Placeholder
+                  alturaTechos: '2.70',
+                  estado: 'reciente'
+                },
+                habitaciones: presupuesto.habitaciones,
+                trabajos: presupuesto.trabajos
+              }} />}
+              fileName={`presupuesto-${presupuesto.cliente.nombre}-${new Date().toISOString().split('T')[0]}.pdf`}
+              className="flex-1"
+            >
+              {({ loading }) => (
+                <Button
+                  className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>Generando PDF...</>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Descargar PDF Completo
+                    </>
+                  )}
+                </Button>
+              )}
+            </PDFDownloadLink>
+          )}
         </div>
       </div>
     </div>
