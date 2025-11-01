@@ -77,7 +77,7 @@ export function PuertasVentanasEditor({
       )}
 
       {puertasVentanas.map((pv) => (
-        <Card key={pv.id} className="relative">
+        <Card key={pv.id} className="relative rounded-2xl hover:shadow-lg transition-all">
           <CardContent className="p-4">
             {editando === pv.id ? (
               <FormPuertaVentana

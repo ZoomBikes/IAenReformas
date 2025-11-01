@@ -344,7 +344,7 @@ function ServicioSelector({
   }
 
   return (
-    <div className="border rounded-lg p-4 bg-slate-50">
+    <div className="border border-blue-200/50 rounded-2xl p-6 glass-blue shadow-md">
       <Label className="mb-2 block">Selecciona el tipo de servicio:</Label>
       <div className="grid grid-cols-2 gap-2 mb-4">
         {tiposDisponibles.map((tipo) => (

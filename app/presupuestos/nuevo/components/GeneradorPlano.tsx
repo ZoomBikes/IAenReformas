@@ -809,7 +809,7 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
       </CardHeader>
       <CardContent>
         {/* Controles superiores */}
-        <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-6 p-4 glass-white border border-blue-200/50 rounded-2xl shadow-lg shadow-blue-500/10">
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -986,7 +986,7 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
           </div>
           {/* Menú de Capas */}
           {mostrarMenuCapas && (
-          <div className="absolute right-4 top-20 bg-white border rounded-lg shadow-lg p-4 z-50 min-w-[200px]">
+          <div className="absolute right-4 top-20 glass-white border border-blue-200/50 rounded-2xl shadow-blue-lg p-6 z-50 min-w-[280px] animate-scale-in">
             <h4 className="font-semibold mb-3 text-sm">Capas de Visibilidad</h4>
             <div className="space-y-2 text-sm">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -1062,14 +1062,14 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
 
           {/* Menú de Plantillas */}
           {mostrarPlantillas && (
-          <div className="absolute right-4 top-20 bg-white border rounded-lg shadow-lg p-4 z-50 min-w-[300px] max-h-[500px] overflow-y-auto">
+          <div className="absolute right-4 top-20 glass-white border border-blue-200/50 rounded-2xl shadow-blue-lg p-6 z-50 min-w-[320px] max-h-[500px] overflow-y-auto animate-scale-in">
             <h4 className="font-semibold mb-3 text-sm flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Plantillas de Distribución
             </h4>
             <div className="space-y-3">
               {plantillas.map((plantilla) => (
-                <div key={plantilla.nombre} className="border rounded-lg p-3 hover:bg-slate-50 transition-colors">
+                <div key={plantilla.nombre} className="border border-blue-200/50 rounded-xl p-4 hover:bg-blue-50/50 transition-all cursor-pointer glass hover:shadow-md">
                   <h5 className="font-medium text-sm mb-1">{plantilla.nombre}</h5>
                   <p className="text-xs text-muted-foreground mb-2">{plantilla.descripcion}</p>
                   <div className="text-xs text-muted-foreground mb-2">
@@ -1096,7 +1096,7 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
         </div>
 
         {/* Viewport del plano */}
-        <div className="border-2 border-slate-300 rounded-lg overflow-hidden bg-white relative" style={{ height: '600px' }}>
+        <div className="border-2 border-blue-200/50 rounded-2xl overflow-hidden bg-gradient-to-br from-blue-50/30 to-white relative shadow-xl shadow-blue-500/10" style={{ height: '600px' }}>
           <svg
             ref={svgRef}
             width="100%"
@@ -1511,9 +1511,9 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
                     width={ancho}
                     height={largo}
                     fill={habitacionSeleccionada === hab.id ? color.fill + 'DD' : color.fill}
-                    stroke={habitacionSeleccionada === hab.id ? '#3b82f6' : color.stroke}
+                    stroke={habitacionSeleccionada === hab.id ? '#2563eb' : color.stroke}
                     strokeWidth={habitacionSeleccionada === hab.id ? "5" : (modoEdicion ? "4" : "3")}
-                    rx="6"
+                    rx="16"
                     className={modoEdicion ? 'hover:opacity-80 transition-opacity cursor-grab' : 'cursor-pointer'}
                   />
 
@@ -1841,10 +1841,10 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
         </div>
 
         {/* Leyenda y ayuda */}
-        <div className="mt-4 grid md:grid-cols-2 gap-4">
-          <div className="border rounded-lg p-4 bg-slate-50">
-            <h4 className="font-semibold mb-3 text-sm text-slate-900 flex items-center gap-2">
-              <Info className="h-4 w-4" />
+        <div className="mt-6 grid md:grid-cols-2 gap-6">
+          <div className="border border-blue-200/50 rounded-2xl p-6 glass-white shadow-md">
+            <h4 className="font-semibold mb-4 text-sm text-slate-900 flex items-center gap-2">
+              <Info className="h-4 w-4 text-blue-600" />
               Leyenda
             </h4>
             <div className="space-y-2 text-xs">
@@ -1874,9 +1874,10 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
               </div>
             </div>
           </div>
-          <div className="border rounded-lg p-4 bg-blue-50">
-            <h4 className="font-semibold mb-3 text-xs text-blue-900 flex items-center gap-2">
-              💡 Consejos
+          <div className="border border-blue-200/50 rounded-2xl p-6 glass-blue shadow-md">
+            <h4 className="font-semibold mb-4 text-sm text-blue-900 flex items-center gap-2">
+              <Info className="h-4 w-4" />
+              Consejos
             </h4>
             <ul className="text-xs text-blue-800 space-y-1">
               <li>• Usa la <strong>rueda del ratón</strong> para hacer zoom</li>

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
+import { ChefHat, Droplet, Square, Paintbrush, Hammer, MoreHorizontal } from 'lucide-react'
 import { FormTrabajos } from './components/FormTrabajos'
 import { FormHabitaciones } from './components/FormHabitaciones'
 import { GeneradorPlano } from './components/GeneradorPlano'
@@ -51,25 +52,29 @@ export default function NuevoPresupuestoPage() {
   }[paso]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
         {/* Header con progreso */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Nuevo Presupuesto</h1>
-          <div className="w-full bg-slate-200 rounded-full h-2">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
+            Nuevo Presupuesto
+          </h1>
+          <div className="w-full bg-blue-100/50 rounded-full h-3 overflow-hidden backdrop-blur-sm border border-blue-200/50 shadow-sm">
             <div 
-              className="bg-primary h-2 rounded-full transition-all duration-300"
+              className="relative h-3 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-500 ease-out shadow-lg shadow-blue-500/30"
               style={{ width: `${porcentajeProgreso}%` }}
-            />
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground mt-2">
-            Paso {['cliente', 'obra', 'espacio', 'habitaciones', 'trabajos', 'revision'].indexOf(paso) + 1} de 6
+          <p className="text-sm text-slate-600 mt-3 font-medium">
+            Paso {['cliente', 'obra', 'espacio', 'habitaciones', 'trabajos', 'revision'].indexOf(paso) + 1} de 6 • {porcentajeProgreso}% completado
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
+        <Card className="rounded-2xl glass-white border-blue-200/50 shadow-blue-lg">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-2xl sm:text-3xl font-bold text-slate-900">
               {paso === 'cliente' && 'Información del Cliente'}
               {paso === 'obra' && 'Tipo de Obra'}
               {paso === 'espacio' && 'Características Generales'}
@@ -77,7 +82,7 @@ export default function NuevoPresupuestoPage() {
               {paso === 'trabajos' && 'Trabajos a Realizar'}
               {paso === 'revision' && 'Revisión Final'}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-base text-slate-600 mt-2">
               {paso === 'cliente' && 'Necesitamos los datos del cliente para el presupuesto'}
               {paso === 'obra' && '¿Qué tipo de reforma se va a realizar?'}
               {paso === 'espacio' && 'Información general del inmueble'}
@@ -173,31 +178,33 @@ export default function NuevoPresupuestoPage() {
               />
             )}
 
-            {/* Navegación */}
-            <div className="flex justify-between mt-8">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const pasos: Paso[] = ['cliente', 'obra', 'espacio', 'habitaciones', 'trabajos', 'revision']
-                  const indice = pasos.indexOf(paso)
-                  if (indice > 0) setPaso(pasos[indice - 1])
-                }}
-                disabled={paso === 'cliente'}
-              >
-                ← Atrás
-              </Button>
-              {paso !== 'revision' && (
-                <Button
-                  onClick={() => {
-                    const pasos: Paso[] = ['cliente', 'obra', 'espacio', 'habitaciones', 'trabajos', 'revision']
-                    const indice = pasos.indexOf(paso)
-                    if (indice < pasos.length - 1) setPaso(pasos[indice + 1])
-                  }}
-                >
-                  Siguiente →
-                </Button>
-              )}
-            </div>
+                {/* Navegación */}
+                <div className="flex flex-col sm:flex-row justify-between gap-4 mt-8 pt-6 border-t border-blue-100/50">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const pasos: Paso[] = ['cliente', 'obra', 'espacio', 'habitaciones', 'trabajos', 'revision']
+                      const indice = pasos.indexOf(paso)
+                      if (indice > 0) setPaso(pasos[indice - 1])
+                    }}
+                    disabled={paso === 'cliente'}
+                    className="w-full sm:w-auto"
+                  >
+                    ← Atrás
+                  </Button>
+                  {paso !== 'revision' && (
+                    <Button
+                      onClick={() => {
+                        const pasos: Paso[] = ['cliente', 'obra', 'espacio', 'habitaciones', 'trabajos', 'revision']
+                        const indice = pasos.indexOf(paso)
+                        if (indice < pasos.length - 1) setPaso(pasos[indice + 1])
+                      }}
+                      className="w-full sm:w-auto"
+                    >
+                      Siguiente →
+                    </Button>
+                  )}
+                </div>
           </CardContent>
         </Card>
       </div>
@@ -267,33 +274,43 @@ function FormCliente({ datos, onChange }: { datos: any, onChange: (data: any) =>
 
 function FormObra({ datos, onChange }: { datos: any, onChange: (data: any) => void }) {
   const tipos = [
-    { value: 'cocina', label: '🍳 Cocina' },
-    { value: 'bano', label: '🚿 Baño' },
-    { value: 'suelos', label: '🪵 Suelos' },
-    { value: 'pintura', label: '🎨 Pintura' },
-    { value: 'reforma_completa', label: '🏗️ Reforma Completa' },
-    { value: 'otros', label: '✨ Otros' },
+    { value: 'cocina', label: 'Cocina', icon: 'ChefHat' },
+    { value: 'bano', label: 'Baño', icon: 'Droplet' },
+    { value: 'suelos', label: 'Suelos', icon: 'Square' },
+    { value: 'pintura', label: 'Pintura', icon: 'Paintbrush' },
+    { value: 'reforma_completa', label: 'Reforma Completa', icon: 'Hammer' },
+    { value: 'otros', label: 'Otros', icon: 'MoreHorizontal' },
   ]
 
   return (
     <div className="space-y-4">
       <div>
         <Label>Tipo de obra *</Label>
-        <div className="grid grid-cols-2 gap-4 mt-2">
-          {tipos.map((tipo) => (
-            <button
-              key={tipo.value}
-              type="button"
-              onClick={() => onChange({ ...datos, tipo: tipo.value })}
-              className={`p-4 border rounded-lg text-left transition-all ${
-                datos.tipo === tipo.value
-                  ? 'border-primary bg-primary/5'
-                  : 'border-input hover:border-primary/50'
-              }`}
-            >
-              {tipo.label}
-            </button>
-          ))}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
+          {tipos.map((tipo) => {
+            const Icon = tipo.icon === 'ChefHat' ? ChefHat :
+                       tipo.icon === 'Droplet' ? Droplet :
+                       tipo.icon === 'Square' ? Square :
+                       tipo.icon === 'Paintbrush' ? Paintbrush :
+                       tipo.icon === 'Hammer' ? Hammer : MoreHorizontal
+            return (
+              <button
+                key={tipo.value}
+                type="button"
+                onClick={() => onChange({ ...datos, tipo: tipo.value })}
+                className={`p-4 border-2 rounded-xl text-left transition-all flex flex-col items-center gap-2 ${
+                  datos.tipo === tipo.value
+                    ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-md shadow-blue-500/20'
+                    : 'border-blue-200/50 glass hover:border-blue-300/70 hover:shadow-md'
+                }`}
+              >
+                <Icon className={`h-6 w-6 ${datos.tipo === tipo.value ? 'text-blue-600' : 'text-blue-400'}`} />
+                <span className={`text-sm font-medium ${datos.tipo === tipo.value ? 'text-blue-700' : 'text-slate-600'}`}>
+                  {tipo.label}
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
       <div>
@@ -314,7 +331,7 @@ function FormObra({ datos, onChange }: { datos: any, onChange: (data: any) => vo
 function FormEspacio({ datos, onChange }: { datos: any, onChange: (data: any) => void }) {
   return (
     <div className="space-y-4">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+      <div className="glass-blue border border-blue-200/50 rounded-2xl p-6 mb-6 shadow-md">
         <p className="text-sm text-blue-900">
           <strong>💡 Información:</strong> En el siguiente paso definirás cada habitación con sus medidas específicas. 
           Aquí solo necesitamos información general del inmueble.

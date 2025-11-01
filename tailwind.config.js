@@ -48,9 +48,20 @@ module.exports = {
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "var(--radius-lg)",
+        md: "var(--radius-md)",
+        sm: "var(--radius-sm)",
+        xl: "var(--radius-xl)",
+        "2xl": "var(--radius-2xl)",
+      },
+      boxShadow: {
+        "glass": "0 8px 32px 0 rgba(31, 38, 135, 0.15)",
+        "glass-blue": "0 8px 32px 0 rgba(59, 130, 246, 0.15)",
+        "blue": "0 10px 40px rgba(59, 130, 246, 0.2)",
+        "blue-lg": "0 20px 50px rgba(59, 130, 246, 0.25)",
+      },
+      backdropBlur: {
+        xs: "2px",
       },
       keyframes: {
         "accordion-down": {

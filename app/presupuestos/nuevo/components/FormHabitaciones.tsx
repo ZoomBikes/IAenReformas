@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, X, Edit2 } from 'lucide-react'
+import { Plus, X, Edit2, Square } from 'lucide-react'
 import { PuertasVentanasEditor } from './PuertasVentanasEditor'
 
 export interface PuertaVentana {
@@ -85,18 +85,18 @@ export function FormHabitaciones({ habitaciones, onChange, alturaTechosGeneral, 
 
   return (
     <div className="space-y-4">
-      <div className="mb-4">
-        <p className="text-sm text-muted-foreground mb-2">
+      <div className="mb-6 p-4 glass-blue rounded-2xl border border-blue-200/50">
+        <p className="text-sm text-blue-900 mb-2 font-medium">
           Define cada habitación con sus medidas exactas. Esto permite cálculos precisos para cada trabajo.
         </p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-blue-700">
           <strong>Importante:</strong> La altura de techos puede variar por habitación. Si no conoces las medidas exactas, puedes dejarlas en blanco y se usarán aproximaciones.
         </p>
       </div>
 
       {/* Lista de habitaciones */}
       {habitaciones.map((habitacion) => (
-        <Card key={habitacion.id} id={`habitacion-${habitacion.id}`} className="transition-all">
+        <Card key={habitacion.id} id={`habitacion-${habitacion.id}`} className="transition-all hover:shadow-lg hover:shadow-blue-500/20 hover:-translate-y-0.5 rounded-2xl">
           <CardContent className="p-4">
             {editando === habitacion.id ? (
               <FormHabitacionDetalle
@@ -281,9 +281,10 @@ function FormHabitacionDetalle({
         </div>
       </div>
 
-      <div className="border-t pt-4">
-        <p className="text-sm font-medium mb-2">
-          📐 Medidas exactas (recomendado - calculará m² automáticamente)
+      <div className="border-t border-blue-100/50 pt-6 mt-6">
+        <p className="text-sm font-medium mb-4 text-slate-900 flex items-center gap-2">
+          <Square className="h-4 w-4 text-blue-600" />
+          Medidas exactas (recomendado - calculará m² automáticamente)
         </p>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -338,7 +339,7 @@ function FormHabitacionDetalle({
         />
       </div>
 
-      <div className="border-t pt-4">
+      <div className="border-t border-blue-100/50 pt-6 mt-6">
         <PuertasVentanasEditor
           puertasVentanas={datos.puertasVentanas || []}
           onChange={(pv) => setDatos({ ...datos, puertasVentanas: pv })}
@@ -376,7 +377,7 @@ function FormHabitacionDetalle({
 
       <div>
         <Label htmlFor="colinda-con">Colinda con (selecciona habitaciones adyacentes)</Label>
-        <div className="mt-2 space-y-2 border rounded-lg p-3 bg-slate-50">
+            <div className="mt-2 space-y-2 border border-blue-200/50 rounded-xl p-4 glass-blue">
           {todasHabitaciones.filter(h => h.id !== habitacion.id).length > 0 ? (
             todasHabitaciones
               .filter(h => h.id !== habitacion.id)
