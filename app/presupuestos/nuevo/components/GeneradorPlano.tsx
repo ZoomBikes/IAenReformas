@@ -417,6 +417,100 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                     className={modoEdicion ? 'hover:opacity-80 transition-opacity' : ''}
                   />
 
+                  {/* Puertas y Ventanas */}
+                  {hab.puertasVentanas?.map((pv) => {
+                    const anchoPVReal = pv.ancho || (pv.tipo === 'puerta' ? 0.9 : 1.2) // Metros
+                    const anchoPV = anchoPVReal * escala // Pixels
+                    const grosorLinea = 6 // Grosor de la línea de la pared en pixels
+                    
+                    let x = 0
+                    let y = 0
+                    let anchoRect = 0
+                    let altoRect = 0
+
+                    // Calcular posición según la pared
+                    switch (pv.pared) {
+                      case 'superior':
+                        // Pared superior: posición horizontal
+                        x = habPos.x + (ancho * pv.posicion / 100) - anchoPV / 2
+                        y = habPos.y - grosorLinea / 2
+                        anchoRect = anchoPV
+                        altoRect = grosorLinea
+                        break
+                      case 'inferior':
+                        // Pared inferior: posición horizontal
+                        x = habPos.x + (ancho * pv.posicion / 100) - anchoPV / 2
+                        y = habPos.y + largo - grosorLinea / 2
+                        anchoRect = anchoPV
+                        altoRect = grosorLinea
+                        break
+                      case 'izquierda':
+                        // Pared izquierda: posición vertical
+                        x = habPos.x - grosorLinea / 2
+                        y = habPos.y + (largo * pv.posicion / 100) - anchoPV / 2
+                        anchoRect = grosorLinea
+                        altoRect = anchoPV
+                        break
+                      case 'derecha':
+                        // Pared derecha: posición vertical
+                        x = habPos.x + ancho - grosorLinea / 2
+                        y = habPos.y + (largo * pv.posicion / 100) - anchoPV / 2
+                        anchoRect = grosorLinea
+                        altoRect = anchoPV
+                        break
+                    }
+
+                    const centerX = x + anchoRect / 2
+                    const centerY = y + altoRect / 2
+
+                    return (
+                      <g key={`pv-${pv.id}`}>
+                        {/* Abertura en la pared - se muestra como una interrupción */}
+                        <rect
+                          x={x}
+                          y={y}
+                          width={anchoRect}
+                          height={altoRect}
+                          fill={pv.tipo === 'puerta' ? '#f3f4f6' : '#e0f2fe'}
+                          stroke={pv.tipo === 'puerta' ? '#4b5563' : '#0284c7'}
+                          strokeWidth={pv.tipo === 'puerta' ? "2.5" : "2"}
+                          strokeDasharray={pv.tipo === 'ventana' ? '3,2' : '0'}
+                          rx="1"
+                          className="pointer-events-none"
+                        />
+                        {/* Símbolo */}
+                        <text
+                          x={centerX}
+                          y={centerY}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fontSize={pv.tipo === 'puerta' ? "14" : "12"}
+                          fill={pv.tipo === 'puerta' ? '#374151' : '#0284c7'}
+                          fontWeight="bold"
+                          className="pointer-events-none"
+                        >
+                          {pv.tipo === 'puerta' ? '🚪' : '🪟'}
+                        </text>
+                        {/* Etiqueta con medidas opcional */}
+                        {(pv.ancho || pv.alto) && (
+                          <text
+                            x={centerX}
+                            y={pv.pared === 'superior' || pv.pared === 'inferior' 
+                              ? (pv.pared === 'superior' ? y - 5 : y + altoRect + 12)
+                              : (pv.pared === 'izquierda' ? x - 8 : x + anchoRect + 8)}
+                            textAnchor={pv.pared === 'superior' || pv.pared === 'inferior' ? "middle" : (pv.pared === 'izquierda' ? "end" : "start")}
+                            dominantBaseline={pv.pared === 'superior' || pv.pared === 'inferior' ? "auto" : "middle"}
+                            fontSize="8"
+                            fill="#6b7280"
+                            className="pointer-events-none"
+                          >
+                            {anchoPVReal}m
+                          </text>
+                        )}
+                      </g>
+                    )
+                  })}
+
                   {/* Medidas - Ancho (superior) */}
                   <g className="pointer-events-none">
                     <line

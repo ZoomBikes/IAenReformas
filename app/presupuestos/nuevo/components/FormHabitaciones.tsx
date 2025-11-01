@@ -6,6 +6,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, X, Edit2 } from 'lucide-react'
+import { PuertasVentanasEditor } from './PuertasVentanasEditor'
+
+export interface PuertaVentana {
+  id: string
+  tipo: 'puerta' | 'ventana'
+  pared: 'superior' | 'inferior' | 'izquierda' | 'derecha'
+  posicion: number // 0-100 (porcentaje desde el inicio de la pared)
+  ancho?: number // Ancho en metros (opcional)
+  alto?: number // Alto en metros (opcional)
+}
 
 export interface Habitacion {
   id: string
@@ -18,6 +28,7 @@ export interface Habitacion {
   perimetro?: string
   numPuertas: string
   numVentanas: string
+  puertasVentanas?: PuertaVentana[] // Posiciones específicas de puertas y ventanas
   colindaCon?: string[] // IDs de habitaciones que colindan
   notas?: string
 }
@@ -327,9 +338,22 @@ function FormHabitacionDetalle({
         />
       </div>
 
+      <div className="border-t pt-4">
+        <PuertasVentanasEditor
+          puertasVentanas={datos.puertasVentanas || []}
+          onChange={(pv) => setDatos({ ...datos, puertasVentanas: pv })}
+          habitacionAncho={datos.ancho}
+          habitacionLargo={datos.largo}
+        />
+        <p className="text-xs text-muted-foreground mt-2">
+          Las puertas y ventanas se mostrarán en el plano en sus posiciones exactas.
+        </p>
+      </div>
+
+      {/* Mantener campos numéricos para compatibilidad */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="puertas-hab">Número de puertas</Label>
+          <Label htmlFor="puertas-hab">Número de puertas (referencia)</Label>
           <Input
             id="puertas-hab"
             type="number"
@@ -339,7 +363,7 @@ function FormHabitacionDetalle({
           />
         </div>
         <div>
-          <Label htmlFor="ventanas-hab">Número de ventanas</Label>
+          <Label htmlFor="ventanas-hab">Número de ventanas (referencia)</Label>
           <Input
             id="ventanas-hab"
             type="number"
