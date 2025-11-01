@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Edit2, Maximize2, RotateCw, RotateCcw, ZoomIn, ZoomOut, Grid, Move, Info, Download } from 'lucide-react'
+import { Edit2, Maximize2, RotateCw, RotateCcw, ZoomIn, ZoomOut, Grid, Move, Info, Download, Layers, Ruler, CheckCircle, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Habitacion } from './FormHabitaciones'
 
@@ -26,6 +26,20 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
   const [mostrarGrid, setMostrarGrid] = useState(true)
   const [mostrarParedes, setMostrarParedes] = useState(true)
   const [snapToGrid, setSnapToGrid] = useState(true)
+  const [modoMedir, setModoMedir] = useState(false)
+  const [puntosMedicion, setPuntosMedicion] = useState<Array<{x: number, y: number}>>([])
+  const [capasVisibles, setCapasVisibles] = useState({
+    salon: true,
+    dormitorio: true,
+    cocina: true,
+    bano: true,
+    pasillo: true,
+    otros: true,
+    medidas: true,
+    colindancias: true,
+    puertasVentanas: true
+  })
+  const [mostrarMenuCapas, setMostrarMenuCapas] = useState(false)
   const [habitacionArrastrando, setHabitacionArrastrando] = useState<string | null>(null)
   const [habitacionSeleccionada, setHabitacionSeleccionada] = useState<string | null>(null)
   const [offsetArrastre, setOffsetArrastre] = useState({ x: 0, y: 0 })
@@ -361,6 +375,97 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
     toast.success('Habitación rotada (ancho ↔ largo)')
   }, [habitaciones, onEditHabitacion])
 
+  // Auto-organizar habitaciones según colindancias
+  const autoOrganizar = useCallback(() => {
+    if (habitaciones.length === 0) return
+
+    const nuevasPosiciones: Record<string, PosicionHabitacion> = {}
+    let currentX = 200
+    let currentY = 200
+    let maxY = 200
+    const procesadas = new Set<string>()
+
+    // Procesar habitaciones con colindancias primero
+    const procesarConColindantes = (hab: Habitacion, x: number, y: number) => {
+      if (procesadas.has(hab.id)) return
+
+      const ancho = parseFloat(hab.ancho || '0') * escala || 100
+      const largo = parseFloat(hab.largo || '0') * escala || 80
+
+      nuevasPosiciones[hab.id] = { x, y }
+      procesadas.add(hab.id)
+
+      // Procesar habitaciones colindantes
+      if (hab.colindaCon && hab.colindaCon.length > 0) {
+        hab.colindaCon.forEach((colindanteId, index) => {
+          const colindante = habitaciones.find(h => h.id === colindanteId)
+          if (colindante && !procesadas.has(colindanteId)) {
+            // Colocar a la derecha
+            procesarConColindantes(colindante, x + ancho + grosorPared, y)
+          }
+        })
+      }
+    }
+
+    // Procesar todas las habitaciones
+    habitaciones.forEach((hab) => {
+      if (!procesadas.has(hab.id)) {
+        if (currentX + parseFloat(hab.ancho || '0') * escala > 2000) {
+          currentX = 200
+          currentY = maxY + 60
+        }
+        procesarConColindantes(hab, currentX, currentY)
+        const ancho = parseFloat(hab.ancho || '0') * escala || 100
+        const largo = parseFloat(hab.largo || '0') * escala || 80
+        maxY = Math.max(maxY, currentY + largo)
+        currentX += ancho + 60
+      }
+    })
+
+    setPosiciones(nuevasPosiciones)
+    toast.success(`${Object.keys(nuevasPosiciones).length} habitaciones organizadas automáticamente`)
+  }, [habitaciones])
+
+  // Validar medidas y detectar inconsistencias
+  const validarMedidas = useCallback(() => {
+    const errores: string[] = []
+    const advertencias: string[] = []
+
+    habitaciones.forEach((hab) => {
+      // Validar que ancho × largo = m²
+      if (hab.ancho && hab.largo) {
+        const anchoNum = parseFloat(hab.ancho)
+        const largoNum = parseFloat(hab.largo)
+        const m2Calculado = anchoNum * largoNum
+        const m2Declarado = parseFloat(hab.metrosCuadrados || '0')
+
+        if (Math.abs(m2Calculado - m2Declarado) > 0.5) {
+          errores.push(`${hab.nombre}: m² calculados (${m2Calculado.toFixed(2)}) no coinciden con declarados (${m2Declarado.toFixed(2)})`)
+        }
+      }
+
+      // Validar puertas/ventanas
+      if (hab.puertasVentanas) {
+        hab.puertasVentanas.forEach((pv) => {
+          const posNum = parseFloat(pv.posicion.toString())
+          if (posNum < 0 || posNum > 100) {
+            advertencias.push(`${hab.nombre}: ${pv.tipo} fuera de rango (${posNum}%)`)
+          }
+        })
+      }
+    })
+
+    if (errores.length > 0 || advertencias.length > 0) {
+      toast.warning(`${errores.length} error(es) y ${advertencias.length} advertencia(s) encontrados`, {
+        description: errores.slice(0, 2).join(', ') || advertencias.slice(0, 2).join(', ')
+      })
+    } else {
+      toast.success('✓ Todas las medidas son consistentes')
+    }
+
+    return { errores, advertencias }
+  }, [habitaciones])
+
   // Exportar plano como PNG
   const exportarAPNG = useCallback(() => {
     const svg = svgRef.current
@@ -500,15 +605,132 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
               🧱 Paredes
             </Button>
             <Button
+              variant={modoMedir ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => {
+                setModoMedir(!modoMedir)
+                setPuntosMedicion([])
+                if (!modoMedir) {
+                  toast.info('Modo medir activado - Haz clic en dos puntos')
+                }
+              }}
+              title="Medir distancias entre puntos"
+            >
+              <Ruler className="h-3 w-3 mr-1" />
+              Medir
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={autoOrganizar}
+              title="Auto-organizar habitaciones según colindancias"
+            >
+              <Sparkles className="h-3 w-3 mr-1" />
+              Auto
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={validarMedidas}
+              title="Validar medidas y detectar inconsistencias"
+            >
+              <CheckCircle className="h-3 w-3 mr-1" />
+              Validar
+            </Button>
+            <Button
               variant="outline"
               size="sm"
               onClick={exportarAPNG}
               title="Exportar plano como imagen PNG"
             >
               <Download className="h-3 w-3 mr-1" />
-              Exportar PNG
+              PNG
+            </Button>
+            <Button
+              variant={mostrarMenuCapas ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setMostrarMenuCapas(!mostrarMenuCapas)}
+              title="Capas de visibilidad"
+            >
+              <Layers className="h-3 w-3 mr-1" />
+              Capas
             </Button>
           </div>
+          {/* Menú de Capas */}
+          {mostrarMenuCapas && (
+          <div className="absolute right-4 top-20 bg-white border rounded-lg shadow-lg p-4 z-50 min-w-[200px]">
+            <h4 className="font-semibold mb-3 text-sm">Capas de Visibilidad</h4>
+            <div className="space-y-2 text-sm">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={capasVisibles.medidas}
+                  onChange={(e) => setCapasVisibles({...capasVisibles, medidas: e.target.checked})}
+                />
+                Medidas y dimensiones
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={capasVisibles.colindancias}
+                  onChange={(e) => setCapasVisibles({...capasVisibles, colindancias: e.target.checked})}
+                />
+                Colindancias
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={capasVisibles.puertasVentanas}
+                  onChange={(e) => setCapasVisibles({...capasVisibles, puertasVentanas: e.target.checked})}
+                />
+                Puertas y ventanas
+              </label>
+              <div className="border-t pt-2 mt-2">
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Tipos de habitaciones:</p>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={capasVisibles.salon}
+                    onChange={(e) => setCapasVisibles({...capasVisibles, salon: e.target.checked})}
+                  />
+                  Salones
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={capasVisibles.dormitorio}
+                    onChange={(e) => setCapasVisibles({...capasVisibles, dormitorio: e.target.checked})}
+                  />
+                  Dormitorios
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={capasVisibles.cocina}
+                    onChange={(e) => setCapasVisibles({...capasVisibles, cocina: e.target.checked})}
+                  />
+                  Cocinas
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={capasVisibles.bano}
+                    onChange={(e) => setCapasVisibles({...capasVisibles, bano: e.target.checked})}
+                  />
+                  Baños
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={capasVisibles.pasillo}
+                    onChange={(e) => setCapasVisibles({...capasVisibles, pasillo: e.target.checked})}
+                  />
+                  Pasillos
+                </label>
+              </div>
+            </div>
+          </div>
+          )}
         </div>
 
         {/* Viewport del plano */}
@@ -536,6 +758,22 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
             onMouseLeave={() => {
               handleMouseUp()
               handleMouseUpPan()
+            }}
+            onClick={(e) => {
+              if (modoMedir && e.target === e.currentTarget) {
+                const svg = svgRef.current
+                if (!svg) return
+
+                const svgRect = svg.getBoundingClientRect()
+                const x = (e.clientX - svgRect.left - pan.x) / zoom
+                const y = (e.clientY - svgRect.top - pan.y) / zoom
+
+                if (puntosMedicion.length < 2) {
+                  setPuntosMedicion([...puntosMedicion, { x, y }])
+                } else {
+                  setPuntosMedicion([{ x, y }])
+                }
+              }
             }}
             className="select-none"
           >
@@ -617,8 +855,37 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
               />
             )}
 
+            {/* Líneas de medición */}
+            {modoMedir && puntosMedicion.length === 2 && (
+              <g>
+                <line
+                  x1={puntosMedicion[0].x}
+                  y1={puntosMedicion[0].y}
+                  x2={puntosMedicion[1].x}
+                  y2={puntosMedicion[1].y}
+                  stroke="#ef4444"
+                  strokeWidth="2"
+                  strokeDasharray="5,5"
+                />
+                <text
+                  x={(puntosMedicion[0].x + puntosMedicion[1].x) / 2}
+                  y={(puntosMedicion[0].y + puntosMedicion[1].y) / 2 - 10}
+                  textAnchor="middle"
+                  fontSize="12"
+                  fill="#ef4444"
+                  fontWeight="bold"
+                  className="pointer-events-none"
+                >
+                  {((Math.sqrt(Math.pow(puntosMedicion[1].x - puntosMedicion[0].x, 2) + 
+                              Math.pow(puntosMedicion[1].y - puntosMedicion[0].y, 2)) / escala).toFixed(2))}m
+                </text>
+                <circle cx={puntosMedicion[0].x} cy={puntosMedicion[0].y} r="5" fill="#ef4444" />
+                <circle cx={puntosMedicion[1].x} cy={puntosMedicion[1].y} r="5" fill="#ef4444" />
+              </g>
+            )}
+
             {/* Colindancias - Paredes compartidas */}
-            {colindancias.map((col, idx) => {
+            {capasVisibles.colindancias && colindancias.map((col, idx) => {
               if ('x' in col.pos) {
                 return (
                   <g key={`col-${idx}`}>
@@ -689,6 +956,8 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
 
             {/* Habitaciones */}
             {habitaciones.map((hab) => {
+              // Filtrar por capas de visibilidad
+              if (!capasVisibles[hab.tipo]) return null
               const habPos = posiciones[hab.id] || posicionesIniciales[hab.id]
               if (!habPos) return null
 
@@ -793,7 +1062,7 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                   )}
 
                   {/* Puertas y Ventanas */}
-                  {hab.puertasVentanas?.map((pv) => {
+                  {capasVisibles.puertasVentanas && hab.puertasVentanas?.map((pv) => {
                     const anchoPVReal = pv.ancho || (pv.tipo === 'puerta' ? 0.9 : 1.2)
                     const anchoPV = anchoPVReal * escala
                     
@@ -882,6 +1151,7 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                   })}
 
                   {/* Medidas - Ancho (superior) */}
+                  {capasVisibles.medidas && (
                   <g className="pointer-events-none">
                     <line
                       x1={habPos.x}
@@ -906,8 +1176,10 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                       {anchoDisplay}m
                     </text>
                   </g>
+                  )}
 
                   {/* Medidas - Largo (lateral izquierdo) */}
+                  {capasVisibles.medidas && (
                   <g className="pointer-events-none">
                     <line
                       x1={habPos.x - 20}
@@ -933,6 +1205,7 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                       {largoDisplay}m
                     </text>
                   </g>
+                  )}
 
                   {/* Nombre y m² en el centro */}
                   <text
