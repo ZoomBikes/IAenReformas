@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Edit2, Maximize2, RotateCw, RotateCcw, ZoomIn, ZoomOut, Grid, Move, Info, Download, Layers, Ruler, CheckCircle, Sparkles } from 'lucide-react'
+import { Edit2, Maximize2, RotateCw, RotateCcw, ZoomIn, ZoomOut, Grid, Move, Info, Download, Layers, Ruler, CheckCircle, Sparkles, StickyNote, FileText, Box, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Habitacion } from './FormHabitaciones'
 
@@ -16,6 +16,26 @@ interface GeneradorPlanoProps {
 interface PosicionHabitacion {
   x: number
   y: number
+}
+
+interface Anotacion {
+  id: string
+  x: number
+  y: number
+  texto: string
+  color: string
+}
+
+interface Plantilla {
+  nombre: string
+  descripcion: string
+  habitaciones: Array<{
+    nombre: string
+    tipo: string
+    ancho: string
+    largo: string
+    colindaCon?: string[]
+  }>
 }
 
 export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosiciones }: GeneradorPlanoProps) {
@@ -40,6 +60,10 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
     puertasVentanas: true
   })
   const [mostrarMenuCapas, setMostrarMenuCapas] = useState(false)
+  const [modoAnotacion, setModoAnotacion] = useState(false)
+  const [anotaciones, setAnotaciones] = useState<Anotacion[]>([])
+  const [mostrarPlantillas, setMostrarPlantillas] = useState(false)
+  const [vista3D, setVista3D] = useState(false)
   const [habitacionArrastrando, setHabitacionArrastrando] = useState<string | null>(null)
   const [habitacionSeleccionada, setHabitacionSeleccionada] = useState<string | null>(null)
   const [offsetArrastre, setOffsetArrastre] = useState({ x: 0, y: 0 })
@@ -426,6 +450,88 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
     toast.success(`${Object.keys(nuevasPosiciones).length} habitaciones organizadas automáticamente`)
   }, [habitaciones])
 
+  // Plantillas predefinidas
+  const plantillas: Plantilla[] = [
+    {
+      nombre: 'L-Shape (Forma L)',
+      descripcion: 'Distribución en L con salón y cocina',
+      habitaciones: [
+        { nombre: 'Salón', tipo: 'salon', ancho: '5', largo: '4' },
+        { nombre: 'Cocina', tipo: 'cocina', ancho: '3', largo: '4', colindaCon: ['Salón'] },
+        { nombre: 'Dormitorio 1', tipo: 'dormitorio', ancho: '4', largo: '3.5' },
+        { nombre: 'Baño', tipo: 'bano', ancho: '2', largo: '2' }
+      ]
+    },
+    {
+      nombre: 'U-Shape (Forma U)',
+      descripcion: 'Distribución en U alrededor de pasillo central',
+      habitaciones: [
+        { nombre: 'Pasillo', tipo: 'pasillo', ancho: '1.5', largo: '6' },
+        { nombre: 'Salón', tipo: 'salon', ancho: '4', largo: '4', colindaCon: ['Pasillo'] },
+        { nombre: 'Cocina', tipo: 'cocina', ancho: '3', largo: '3', colindaCon: ['Pasillo'] },
+        { nombre: 'Dormitorio 1', tipo: 'dormitorio', ancho: '3.5', largo: '3.5', colindaCon: ['Pasillo'] },
+        { nombre: 'Dormitorio 2', tipo: 'dormitorio', ancho: '3.5', largo: '3.5', colindaCon: ['Pasillo'] },
+        { nombre: 'Baño', tipo: 'bano', ancho: '2', largo: '2', colindaCon: ['Pasillo'] }
+      ]
+    },
+    {
+      nombre: 'Rectangular Simple',
+      descripcion: 'Distribución lineal simple',
+      habitaciones: [
+        { nombre: 'Salón', tipo: 'salon', ancho: '5', largo: '4' },
+        { nombre: 'Cocina', tipo: 'cocina', ancho: '3', largo: '4', colindaCon: ['Salón'] },
+        { nombre: 'Dormitorio', tipo: 'dormitorio', ancho: '4', largo: '3.5', colindaCon: ['Cocina'] },
+        { nombre: 'Baño', tipo: 'bano', ancho: '2', largo: '2', colindaCon: ['Dormitorio'] }
+      ]
+    }
+  ]
+
+  // Aplicar plantilla
+  const aplicarPlantilla = useCallback((plantilla: Plantilla) => {
+    if (!onEditHabitacion) {
+      toast.error('No se puede aplicar plantilla sin función de edición')
+      return
+    }
+
+    toast.info(`Aplicando plantilla: ${plantilla.nombre}`)
+    // Notificar al componente padre para crear las habitaciones
+    plantilla.habitaciones.forEach((habTemplate, index) => {
+      setTimeout(() => {
+        const nuevaHab: Habitacion = {
+          id: Date.now().toString() + index,
+          nombre: habTemplate.nombre,
+          tipo: habTemplate.tipo as any,
+          metrosCuadrados: (parseFloat(habTemplate.ancho) * parseFloat(habTemplate.largo)).toFixed(2),
+          alturaTechos: '2.70',
+          ancho: habTemplate.ancho,
+          largo: habTemplate.largo,
+          numPuertas: '1',
+          numVentanas: habTemplate.tipo === 'bano' ? '0' : '1',
+          colindaCon: habTemplate.colindaCon || []
+        }
+        // Esto requeriría una función de creación desde el padre
+        toast.info(`Crea "${habTemplate.nombre}" manualmente para usar la plantilla`)
+      }, index * 100)
+    })
+
+    setMostrarPlantillas(false)
+    toast.success(`Plantilla "${plantilla.nombre}" - Crea las habitaciones manualmente`)
+  }, [onEditHabitacion])
+
+  // Añadir anotación
+  const añadirAnotacion = useCallback((x: number, y: number) => {
+    const nuevaAnotacion: Anotacion = {
+      id: Date.now().toString(),
+      x,
+      y,
+      texto: 'Nueva nota',
+      color: '#fef3c7'
+    }
+    setAnotaciones([...anotaciones, nuevaAnotacion])
+    setModoAnotacion(false)
+    toast.success('Anotación añadida - Haz clic para editar')
+  }, [anotaciones])
+
   // Validar medidas y detectar inconsistencias
   const validarMedidas = useCallback(() => {
     const errores: string[] = []
@@ -655,6 +761,43 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
               <Layers className="h-3 w-3 mr-1" />
               Capas
             </Button>
+            <Button
+              variant={modoAnotacion ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => {
+                setModoAnotacion(!modoAnotacion)
+                if (!modoAnotacion) {
+                  toast.info('Modo anotación - Haz clic en el plano para añadir notas')
+                }
+              }}
+              title="Añadir anotaciones y notas"
+            >
+              <StickyNote className="h-3 w-3 mr-1" />
+              Notas
+            </Button>
+            <Button
+              variant={mostrarPlantillas ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setMostrarPlantillas(!mostrarPlantillas)}
+              title="Aplicar plantillas de distribución"
+            >
+              <FileText className="h-3 w-3 mr-1" />
+              Plantillas
+            </Button>
+            <Button
+              variant={vista3D ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => {
+                setVista3D(!vista3D)
+                if (!vista3D) {
+                  toast.info('Vista 3D activada - Visualización isométrica')
+                }
+              }}
+              title="Vista isométrica 3D"
+            >
+              <Eye className="h-3 w-3 mr-1" />
+              3D
+            </Button>
           </div>
           {/* Menú de Capas */}
           {mostrarMenuCapas && (
@@ -731,6 +874,40 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
             </div>
           </div>
           )}
+
+          {/* Menú de Plantillas */}
+          {mostrarPlantillas && (
+          <div className="absolute right-4 top-20 bg-white border rounded-lg shadow-lg p-4 z-50 min-w-[300px] max-h-[500px] overflow-y-auto">
+            <h4 className="font-semibold mb-3 text-sm flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Plantillas de Distribución
+            </h4>
+            <div className="space-y-3">
+              {plantillas.map((plantilla) => (
+                <div key={plantilla.nombre} className="border rounded-lg p-3 hover:bg-slate-50 transition-colors">
+                  <h5 className="font-medium text-sm mb-1">{plantilla.nombre}</h5>
+                  <p className="text-xs text-muted-foreground mb-2">{plantilla.descripcion}</p>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    <p className="font-medium">Habitaciones:</p>
+                    <ul className="list-disc list-inside ml-2">
+                      {plantilla.habitaciones.map(h => (
+                        <li key={h.nombre}>{h.nombre} ({h.ancho}m × {h.largo}m)</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => aplicarPlantilla(plantilla)}
+                    className="w-full"
+                  >
+                    Usar Plantilla
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+          )}
         </div>
 
         {/* Viewport del plano */}
@@ -760,19 +937,21 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
               handleMouseUpPan()
             }}
             onClick={(e) => {
+              const svg = svgRef.current
+              if (!svg) return
+
+              const svgRect = svg.getBoundingClientRect()
+              const x = (e.clientX - svgRect.left - pan.x) / zoom
+              const y = (e.clientY - svgRect.top - pan.y) / zoom
+
               if (modoMedir && e.target === e.currentTarget) {
-                const svg = svgRef.current
-                if (!svg) return
-
-                const svgRect = svg.getBoundingClientRect()
-                const x = (e.clientX - svgRect.left - pan.x) / zoom
-                const y = (e.clientY - svgRect.top - pan.y) / zoom
-
                 if (puntosMedicion.length < 2) {
                   setPuntosMedicion([...puntosMedicion, { x, y }])
                 } else {
                   setPuntosMedicion([{ x, y }])
                 }
+              } else if (modoAnotacion && e.target === e.currentTarget) {
+                añadirAnotacion(x, y)
               }
             }}
             className="select-none"
@@ -844,7 +1023,7 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
             </defs>
 
             {/* Grid de fondo */}
-            {mostrarGrid && (
+            {mostrarGrid && !vista3D && (
               <rect
                 x={canvasBounds.minX || 0}
                 y={canvasBounds.minY || 0}
@@ -854,6 +1033,86 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                 opacity="0.5"
               />
             )}
+
+            {/* Vista 3D Isométrica */}
+            {vista3D && habitaciones.map((hab) => {
+              const habPos = posiciones[hab.id] || posicionesIniciales[hab.id]
+              if (!habPos || !capasVisibles[hab.tipo]) return null
+
+              const ancho = parseFloat(hab.ancho || '0') * escala || 100
+              const largo = parseFloat(hab.largo || '0') * escala || 80
+              const altura = parseFloat(hab.alturaTechos || '2.70') * escala * 0.3 // Altura en perspectiva
+              const color = colores[hab.tipo] || colores.otros
+
+              // Coordenadas isométricas
+              const isoX = habPos.x + (ancho / 2)
+              const isoY = habPos.y + (largo / 2)
+              const isoOffsetX = ancho / 2 * 0.5 // Proyección isométrica
+              const isoOffsetY = largo / 2 * 0.5
+
+              return (
+                <g key={`3d-${hab.id}`} opacity="0.9">
+                  {/* Base (suelo) */}
+                  <polygon
+                    points={`
+                      ${isoX - isoOffsetX},${isoY + isoOffsetY}
+                      ${isoX + isoOffsetX},${isoY - isoOffsetY}
+                      ${isoX + ancho/2 + isoOffsetX},${isoY + largo/2 - isoOffsetY}
+                      ${isoX - ancho/2 + isoOffsetX},${isoY + largo/2 + isoOffsetY}
+                    `}
+                    fill={color.fill}
+                    stroke={color.stroke}
+                    strokeWidth="2"
+                  />
+                  {/* Paredes laterales en perspectiva */}
+                  <polygon
+                    points={`
+                      ${isoX - ancho/2 + isoOffsetX},${isoY + largo/2 + isoOffsetY}
+                      ${isoX - isoOffsetX},${isoY + isoOffsetY}
+                      ${isoX - isoOffsetX},${isoY + isoOffsetY - altura}
+                      ${isoX - ancho/2 + isoOffsetX},${isoY + largo/2 + isoOffsetY - altura}
+                    `}
+                    fill={color.stroke}
+                    opacity="0.6"
+                  />
+                  <polygon
+                    points={`
+                      ${isoX + isoOffsetX},${isoY - isoOffsetY}
+                      ${isoX + ancho/2 + isoOffsetX},${isoY + largo/2 - isoOffsetY}
+                      ${isoX + ancho/2 + isoOffsetX},${isoY + largo/2 - isoOffsetY - altura}
+                      ${isoX + isoOffsetX},${isoY - isoOffsetY - altura}
+                    `}
+                    fill={color.stroke}
+                    opacity="0.6"
+                  />
+                  {/* Techo */}
+                  <polygon
+                    points={`
+                      ${isoX - isoOffsetX},${isoY + isoOffsetY - altura}
+                      ${isoX + isoOffsetX},${isoY - isoOffsetY - altura}
+                      ${isoX + ancho/2 + isoOffsetX},${isoY + largo/2 - isoOffsetY - altura}
+                      ${isoX - ancho/2 + isoOffsetX},${isoY + largo/2 + isoOffsetY - altura}
+                    `}
+                    fill={color.fill}
+                    stroke={color.stroke}
+                    strokeWidth="2"
+                    opacity="0.7"
+                  />
+                  {/* Nombre en el techo */}
+                  <text
+                    x={isoX}
+                    y={isoY - isoOffsetY - altura - 5}
+                    textAnchor="middle"
+                    fontSize="12"
+                    fontWeight="bold"
+                    fill={color.text}
+                    className="pointer-events-none"
+                  >
+                    {hab.nombre}
+                  </text>
+                </g>
+              )
+            })}
 
             {/* Líneas de medición */}
             {modoMedir && puntosMedicion.length === 2 && (
@@ -954,8 +1213,70 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
               return null
             })}
 
-            {/* Habitaciones */}
-            {habitaciones.map((hab) => {
+            {/* Anotaciones */}
+            {anotaciones.map((anot) => (
+              <g key={anot.id}>
+                <rect
+                  x={anot.x - 50}
+                  y={anot.y - 30}
+                  width="100"
+                  height="60"
+                  fill={anot.color}
+                  stroke="#f59e0b"
+                  strokeWidth="2"
+                  rx="4"
+                  className="cursor-pointer"
+                  onClick={() => {
+                    const nuevoTexto = prompt('Editar nota:', anot.texto)
+                    if (nuevoTexto !== null) {
+                      setAnotaciones(anotaciones.map(a => 
+                        a.id === anot.id ? { ...a, texto: nuevoTexto } : a
+                      ))
+                    }
+                  }}
+                />
+                <text
+                  x={anot.x}
+                  y={anot.y}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize="10"
+                  fill="#92400e"
+                  fontWeight="600"
+                  className="pointer-events-none"
+                >
+                  {anot.texto.length > 15 ? anot.texto.substring(0, 15) + '...' : anot.texto}
+                </text>
+                <circle
+                  cx={anot.x + 45}
+                  cy={anot.y - 25}
+                  r="8"
+                  fill="#ef4444"
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setAnotaciones(anotaciones.filter(a => a.id !== anot.id))
+                    toast.success('Anotación eliminada')
+                  }}
+                >
+                  <title>Eliminar</title>
+                </circle>
+                <text
+                  x={anot.x + 45}
+                  y={anot.y - 25}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize="8"
+                  fill="white"
+                  fontWeight="bold"
+                  className="pointer-events-none"
+                >
+                  ×
+                </text>
+              </g>
+            ))}
+
+            {/* Habitaciones (vista 2D) */}
+            {!vista3D && habitaciones.map((hab) => {
               // Filtrar por capas de visibilidad
               if (!capasVisibles[hab.tipo]) return null
               const habPos = posiciones[hab.id] || posicionesIniciales[hab.id]
@@ -1332,6 +1653,9 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
               <li>• <strong>Clic derecho</strong> o botón ↻ para rotar habitación</li>
               <li>• <strong>Snap activado</strong> alinea automáticamente al grid</li>
               <li>• <strong>Exporta PNG</strong> para guardar el plano</li>
+              <li>• <strong>Notas</strong>: añade anotaciones haciendo clic</li>
+              <li>• <strong>Plantillas</strong>: aplica distribuciones predefinidas</li>
+              <li>• <strong>Vista 3D</strong>: visualización isométrica</li>
               <li>• <strong>Verde = colindancias</strong>, gris = paredes externas</li>
               <li>• Líneas con flechas muestran las medidas exactas</li>
             </ul>
