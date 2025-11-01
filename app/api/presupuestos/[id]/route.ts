@@ -77,3 +77,70 @@ export async function GET(
   }
 }
 
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Eliminar en cascada: primero componentes, luego trabajos, después presupuesto y cliente
+    const presupuesto = await prisma.presupuesto.findUnique({
+      where: { id: params.id },
+      include: {
+        trabajos: {
+          include: {
+            componentes: true
+          }
+        }
+      }
+    })
+
+    if (!presupuesto) {
+      return NextResponse.json(
+        { error: 'Presupuesto no encontrado' },
+        { status: 404 }
+      )
+    }
+
+    // Eliminar componentes
+    for (const trabajo of presupuesto.trabajos) {
+      if (trabajo.componentes.length > 0) {
+        await prisma.componenteTrabajo.deleteMany({
+          where: { trabajoId: trabajo.id }
+        })
+      }
+    }
+
+    // Eliminar trabajos
+    await prisma.trabajoPresupuesto.deleteMany({
+      where: { presupuestoId: params.id }
+    })
+
+    // Eliminar presupuesto
+    await prisma.presupuesto.delete({
+      where: { id: params.id }
+    })
+
+    // Eliminar cliente (si no tiene más presupuestos)
+    const otrosPresupuestos = await prisma.presupuesto.findFirst({
+      where: { 
+        clienteId: presupuesto.clienteId,
+        id: { not: params.id }
+      }
+    })
+
+    if (!otrosPresupuestos) {
+      await prisma.cliente.delete({
+        where: { id: presupuesto.clienteId }
+      })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error al eliminar presupuesto:', error)
+    return NextResponse.json(
+      { error: 'Error al eliminar el presupuesto' },
+      { status: 500 }
+    )
+  }
+}
+

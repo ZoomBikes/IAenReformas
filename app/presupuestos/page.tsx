@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
-import { Plus, Search, FileText, Eye, Calendar } from 'lucide-react'
+import { Plus, Search, FileText, Eye, Calendar, Copy, Trash2, MoreVertical } from 'lucide-react'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 
 interface Presupuesto {
   id: string
@@ -23,6 +24,7 @@ interface Presupuesto {
 }
 
 export default function PresupuestosPage() {
+  const router = useRouter()
   const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -73,6 +75,49 @@ export default function PresupuestosPage() {
         return 'bg-red-100 text-red-800 border border-red-200'
       default:
         return 'bg-slate-100 text-slate-800 border border-slate-200'
+    }
+  }
+
+  const duplicarPresupuesto = async (id: string) => {
+    try {
+      // Cargar los datos completos del presupuesto
+      const response = await fetch(`/api/presupuestos/${id}`)
+      if (!response.ok) throw new Error('Error al cargar')
+      
+      const data = await response.json()
+      const presupuestoCompleto = data.presupuesto
+      
+      // Guardar en localStorage para que el formulario de nuevo presupuesto lo detecte
+      localStorage.setItem('presupuesto-duplicar', JSON.stringify(presupuestoCompleto))
+      
+      // Redirigir al formulario de nuevo presupuesto
+      router.push('/presupuestos/nuevo')
+      
+      toast.success('Presupuesto copiado, puedes editarlo y guardarlo')
+    } catch (error) {
+      toast.error('Error al duplicar el presupuesto')
+      console.error(error)
+    }
+  }
+
+  const eliminarPresupuesto = async (id: string) => {
+    if (!window.confirm('¿Estás seguro de eliminar este presupuesto? Esta acción no se puede deshacer.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/presupuestos/${id}`, {
+        method: 'DELETE'
+      })
+      
+      if (!response.ok) throw new Error('Error al eliminar')
+      
+      // Actualizar lista local
+      setPresupuestos(presupuestos.filter(p => p.id !== id))
+      toast.success('Presupuesto eliminado')
+    } catch (error) {
+      toast.error('Error al eliminar el presupuesto')
+      console.error(error)
     }
   }
 
@@ -170,12 +215,30 @@ export default function PresupuestosPage() {
                           €{presupuesto.total.toFixed(2)}
                         </p>
                       </div>
-                      <Link href={`/presupuestos/${presupuesto.id}`}>
-                        <Button variant="outline" size="sm" className="hover:bg-blue-50/50 transition-all">
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver Detalles
+                      <div className="flex gap-2">
+                        <Link href={`/presupuestos/${presupuesto.id}`}>
+                          <Button variant="outline" size="sm" className="hover:bg-blue-50/50 transition-all">
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="hover:bg-blue-50/50 transition-all"
+                          onClick={() => duplicarPresupuesto(presupuesto.id)}
+                        >
+                          <Copy className="h-4 w-4" />
                         </Button>
-                      </Link>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="hover:bg-red-50/50 transition-all text-red-600 hover:text-red-700"
+                          onClick={() => eliminarPresupuesto(presupuesto.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>

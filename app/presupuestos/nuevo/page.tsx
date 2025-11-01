@@ -51,8 +51,44 @@ export default function NuevoPresupuestoPage() {
     revision: 90
   }[paso]
 
-  // Cargar borrador desde localStorage al montar
+  // Cargar borrador o presupuesto duplicado desde localStorage al montar
   useEffect(() => {
+    // Primero verificar si hay un presupuesto para duplicar
+    const presupuestoDuplicar = localStorage.getItem('presupuesto-duplicar')
+    if (presupuestoDuplicar) {
+      try {
+        const datosDuplicar = JSON.parse(presupuestoDuplicar)
+        
+        // Convertir del formato de la API al formato del formulario
+        setDatos({
+          cliente: datosDuplicar.cliente,
+          obra: {
+            tipo: datosDuplicar.tipoObra,
+            descripcion: datosDuplicar.descripcionObra || ''
+          },
+          espacio: {
+            metrosTotales: datosDuplicar.habitaciones?.reduce((acc: number, h: any) => acc + (parseFloat(h.metrosCuadrados) || 0), 0).toString() || '',
+            alturaTechos: datosDuplicar.habitaciones?.[0]?.alturaTechos || '2.70',
+            estado: 'reciente'
+          },
+          habitaciones: datosDuplicar.habitaciones || [],
+          trabajos: datosDuplicar.trabajos || []
+        })
+        
+        // Limpiar después de cargar
+        localStorage.removeItem('presupuesto-duplicar')
+        
+        toast.success('Presupuesto cargado para edición', {
+          description: 'Puedes modificar los datos y guardarlo como nuevo',
+          duration: 4000
+        })
+        return
+      } catch (e) {
+        console.error('Error al cargar presupuesto duplicar:', e)
+      }
+    }
+    
+    // Si no hay presupuesto para duplicar, cargar borrador
     const borrador = localStorage.getItem('presupuesto-borrador')
     if (borrador) {
       try {
