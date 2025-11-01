@@ -7,6 +7,17 @@ import { Separator } from '@/components/ui/separator'
 import { CheckCircle2, AlertCircle, FileText, Download, Mail } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Habitacion } from './FormHabitaciones'
+import dynamic from 'next/dynamic'
+
+// Cargar PDF dinámicamente para reducir bundle size
+const PDFDownloadLink = dynamic(
+  () => import('@react-pdf/renderer').then((mod) => mod.PDFDownloadLink),
+  { ssr: false }
+)
+const PresupuestoPDF = dynamic(
+  () => import('@/components/pdf/PresupuestoPDF').then((mod) => mod.PresupuestoPDF),
+  { ssr: false }
+)
 
 interface RevisionFinalProps {
   datos: {
@@ -22,7 +33,6 @@ interface RevisionFinalProps {
 
 export function RevisionFinal({ datos, onGuardar, onGenerarPDF }: RevisionFinalProps) {
   const [guardando, setGuardando] = useState(false)
-  const [generandoPDF, setGenerandoPDF] = useState(false)
 
   // Calcular totales
   const calcularTotales = () => {
@@ -126,23 +136,6 @@ export function RevisionFinal({ datos, onGuardar, onGenerarPDF }: RevisionFinalP
     }
   }
 
-  const handleGenerarPDF = async () => {
-    if (!esValido) {
-      toast.error('Por favor, completa todos los campos requeridos')
-      return
-    }
-
-    setGenerandoPDF(true)
-    try {
-      await onGenerarPDF()
-      toast.success('PDF generado correctamente')
-    } catch (error) {
-      toast.error('Error al generar el PDF')
-      console.error(error)
-    } finally {
-      setGenerandoPDF(false)
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -305,20 +298,43 @@ export function RevisionFinal({ datos, onGuardar, onGenerarPDF }: RevisionFinalP
         >
           {guardando ? 'Guardando...' : '💾 Guardar Presupuesto'}
         </Button>
-        <Button
-          onClick={handleGenerarPDF}
-          disabled={!esValido || generandoPDF}
-          variant="outline"
-          className="flex-1"
-          size="lg"
-        >
-          {generandoPDF ? 'Generando...' : (
-            <>
-              <FileText className="h-4 w-4 mr-2" />
-              Generar PDF
-            </>
-          )}
-        </Button>
+        
+        {esValido ? (
+          <PDFDownloadLink
+            document={<PresupuestoPDF datos={datos} />}
+            fileName={`presupuesto-${datos.cliente.nombre}-${new Date().toISOString().split('T')[0]}.pdf`}
+            className="flex-1"
+          >
+            {({ loading }) => (
+              <Button
+                disabled={loading}
+                variant="outline"
+                className="w-full"
+                size="lg"
+              >
+                {loading ? (
+                  <>Generando PDF...</>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Descargar PDF
+                  </>
+                )}
+              </Button>
+            )}
+          </PDFDownloadLink>
+        ) : (
+          <Button
+            variant="outline"
+            className="flex-1"
+            size="lg"
+            disabled
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Generar PDF
+          </Button>
+        )}
+        
         <Button
           variant="outline"
           className="flex-1"
