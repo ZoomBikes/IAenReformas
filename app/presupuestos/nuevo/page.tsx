@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from 'sonner'
 import { FormTrabajos } from './components/FormTrabajos'
 import { FormHabitaciones } from './components/FormHabitaciones'
 import { GeneradorPlano } from './components/GeneradorPlano'
+import { RevisionFinal } from './components/RevisionFinal'
 
 type Paso = 'cliente' | 'obra' | 'espacio' | 'habitaciones' | 'trabajos' | 'revision'
 
@@ -126,9 +128,16 @@ export default function NuevoPresupuestoPage() {
               />
             )}
             {paso === 'revision' && (
-              <div>
-                <p className="text-muted-foreground">Revisión en desarrollo...</p>
-              </div>
+              <RevisionFinal
+                datos={datos}
+                onGuardar={async () => {
+                  // Se maneja internamente en RevisionFinal
+                }}
+                onGenerarPDF={async () => {
+                  // TODO: Implementar generación de PDF
+                  toast.info('Generación de PDF próximamente')
+                }}
+              />
             )}
 
             {/* Navegación */}
@@ -144,16 +153,17 @@ export default function NuevoPresupuestoPage() {
               >
                 ← Atrás
               </Button>
-              <Button
-                onClick={() => {
-                  const pasos: Paso[] = ['cliente', 'obra', 'espacio', 'habitaciones', 'trabajos', 'revision']
-                  const indice = pasos.indexOf(paso)
-                  if (indice < pasos.length - 1) setPaso(pasos[indice + 1])
-                }}
-                disabled={paso === 'revision'}
-              >
-                Siguiente →
-              </Button>
+              {paso !== 'revision' && (
+                <Button
+                  onClick={() => {
+                    const pasos: Paso[] = ['cliente', 'obra', 'espacio', 'habitaciones', 'trabajos', 'revision']
+                    const indice = pasos.indexOf(paso)
+                    if (indice < pasos.length - 1) setPaso(pasos[indice + 1])
+                  }}
+                >
+                  Siguiente →
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

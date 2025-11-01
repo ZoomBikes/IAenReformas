@@ -13,11 +13,18 @@ export default function Home() {
           <p className="text-xl text-muted-foreground mb-8">
             Generador inteligente de presupuestos para reformas
           </p>
-          <Link href="/presupuestos/nuevo">
-            <Button size="lg" className="text-lg px-8 py-6">
-              Crear Nuevo Presupuesto
-            </Button>
-          </Link>
+          <div className="flex gap-4">
+            <Link href="/presupuestos/nuevo">
+              <Button size="lg" className="text-lg px-8 py-6">
+                Crear Nuevo Presupuesto
+              </Button>
+            </Link>
+            <Link href="/presupuestos">
+              <Button size="lg" variant="outline" className="text-lg px-8 py-6">
+                Ver Presupuestos
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 mt-12">

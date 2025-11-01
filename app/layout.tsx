@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import { ReactNode } from 'react'
 import './globals.css'
+import { Providers } from './providers'
 
 export const metadata: Metadata = {
-  title: 'IA en Reformas',
-  description: 'Aplicación web desarrollada con Next.js y Vercel',
+  title: 'IA en Reformas - Generador de Presupuestos',
+  description: 'Aplicación profesional para generar presupuestos inteligentes de reformas',
 }
 
 export default function RootLayout({
@@ -14,7 +15,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   )
 }
