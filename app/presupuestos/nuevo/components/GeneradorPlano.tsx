@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Edit2, Maximize2, RotateCcw, ZoomIn, ZoomOut, Grid, Move, Info, Download } from 'lucide-react'
+import { Edit2, Maximize2, RotateCw, RotateCcw, ZoomIn, ZoomOut, Grid, Move, Info, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Habitacion } from './FormHabitaciones'
 
@@ -25,7 +25,9 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [mostrarGrid, setMostrarGrid] = useState(true)
   const [mostrarParedes, setMostrarParedes] = useState(true)
+  const [snapToGrid, setSnapToGrid] = useState(true)
   const [habitacionArrastrando, setHabitacionArrastrando] = useState<string | null>(null)
+  const [habitacionSeleccionada, setHabitacionSeleccionada] = useState<string | null>(null)
   const [offsetArrastre, setOffsetArrastre] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
   const [panStart, setPanStart] = useState({ x: 0, y: 0 })
@@ -33,6 +35,7 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
 
   const escala = 25 // 1m = 25px para mejor visualización
   const grosorPared = 8 // Grosor de las paredes en pixels
+  const gridSize = 25 // Tamaño del grid para snap (coincide con escala)
 
   // Calcular posiciones iniciales basadas en colindancias
   const posicionesIniciales = useMemo(() => {
@@ -144,8 +147,14 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
       if (!svg) return
 
       const svgRect = svg.getBoundingClientRect()
-      const mouseX = (e.clientX - svgRect.left - pan.x) / zoom
-      const mouseY = (e.clientY - svgRect.top - pan.y) / zoom
+      let mouseX = (e.clientX - svgRect.left - pan.x) / zoom
+      let mouseY = (e.clientY - svgRect.top - pan.y) / zoom
+
+      // Aplicar snap to grid si está activado
+      if (snapToGrid) {
+        mouseX = Math.round(mouseX / gridSize) * gridSize
+        mouseY = Math.round(mouseY / gridSize) * gridSize
+      }
 
       setPosiciones(prev => ({
         ...prev,
@@ -155,7 +164,7 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
         }
       }))
     }
-  }, [habitacionArrastrando, modoEdicion, offsetArrastre, pan, zoom])
+  }, [habitacionArrastrando, modoEdicion, offsetArrastre, pan, zoom, snapToGrid, gridSize])
 
   const handleMouseUp = useCallback(() => {
     if (habitacionArrastrando) {
@@ -330,6 +339,77 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
     }
   }, [habitaciones, posiciones, posicionesIniciales])
 
+  // Rotar habitación (intercambiar ancho/largo y ajustar posición)
+  const rotarHabitacion = useCallback((habitacionId: string) => {
+    const hab = habitaciones.find(h => h.id === habitacionId)
+    if (!hab) return
+
+    // Intercambiar ancho y largo
+    const nuevoAncho = hab.largo || ''
+    const nuevoLargo = hab.ancho || ''
+    
+    // Notificar al componente padre para actualizar la habitación
+    if (onEditHabitacion) {
+      const habActualizada = {
+        ...hab,
+        ancho: nuevoAncho,
+        largo: nuevoLargo
+      }
+      onEditHabitacion(habActualizada)
+    }
+
+    toast.success('Habitación rotada (ancho ↔ largo)')
+  }, [habitaciones, onEditHabitacion])
+
+  // Exportar plano como PNG
+  const exportarAPNG = useCallback(() => {
+    const svg = svgRef.current
+    if (!svg) {
+      toast.error('No se pudo exportar el plano')
+      return
+    }
+
+    // Crear una copia del SVG sin transformaciones
+    const svgClone = svg.cloneNode(true) as SVGSVGElement
+    svgClone.setAttribute('width', canvasBounds.width.toString())
+    svgClone.setAttribute('height', canvasBounds.height.toString())
+    svgClone.setAttribute('viewBox', `0 0 ${canvasBounds.width} ${canvasBounds.height}`)
+    svgClone.style.transform = 'none'
+    
+    // Convertir a canvas
+    const svgData = new XMLSerializer().serializeToString(svgClone)
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    const img = new Image()
+    
+    canvas.width = canvasBounds.width * 2 // 2x para mejor calidad
+    canvas.height = canvasBounds.height * 2
+    
+    img.onload = () => {
+      if (ctx) {
+        ctx.fillStyle = 'white'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = `plano-vivienda-${new Date().toISOString().split('T')[0]}.png`
+            link.click()
+            URL.revokeObjectURL(url)
+            toast.success('Plano exportado como PNG')
+          }
+        }, 'image/png', 1.0)
+      }
+    }
+    
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+    img.src = url
+  }, [canvasBounds])
+
   return (
     <Card>
       <CardHeader>
@@ -391,7 +471,19 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
             </Button>
           </div>
 
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={snapToGrid ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => {
+                setSnapToGrid(!snapToGrid)
+                toast.info(snapToGrid ? 'Snap desactivado' : 'Snap activado')
+              }}
+              title="Alinear al grid al arrastrar"
+            >
+              <Grid className="h-3 w-3 mr-1" />
+              Snap
+            </Button>
             <Button
               variant={mostrarGrid ? 'default' : 'outline'}
               size="sm"
@@ -406,6 +498,15 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
               onClick={() => setMostrarParedes(!mostrarParedes)}
             >
               🧱 Paredes
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportarAPNG}
+              title="Exportar plano como imagen PNG"
+            >
+              <Download className="h-3 w-3 mr-1" />
+              Exportar PNG
             </Button>
           </div>
         </div>
@@ -603,9 +704,17 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                   key={hab.id}
                   style={{ cursor: modoEdicion ? 'grab' : 'pointer' }}
                   onMouseDown={(e) => handleMouseDown(e, hab.id)}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation()
                     if (!modoEdicion && onEditHabitacion) {
+                      setHabitacionSeleccionada(hab.id)
                       onEditHabitacion(hab)
+                    }
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    if (modoEdicion) {
+                      rotarHabitacion(hab.id)
                     }
                   }}
                 >
@@ -626,11 +735,11 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                     y={habPos.y}
                     width={ancho}
                     height={largo}
-                    fill={color.fill}
-                    stroke={color.stroke}
-                    strokeWidth={modoEdicion ? "4" : "3"}
+                    fill={habitacionSeleccionada === hab.id ? color.fill + 'DD' : color.fill}
+                    stroke={habitacionSeleccionada === hab.id ? '#3b82f6' : color.stroke}
+                    strokeWidth={habitacionSeleccionada === hab.id ? "5" : (modoEdicion ? "4" : "3")}
                     rx="6"
-                    className={modoEdicion ? 'hover:opacity-80 transition-opacity' : ''}
+                    className={modoEdicion ? 'hover:opacity-80 transition-opacity cursor-grab' : 'cursor-pointer'}
                   />
 
                   {/* Paredes visibles */}
@@ -865,6 +974,39 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                       <title>{hab.colindaCon.length} colindancia(s)</title>
                     </circle>
                   )}
+
+                  {/* Botón de rotación (visible en modo edición) */}
+                  {modoEdicion && (
+                    <g
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        rotarHabitacion(hab.id)
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <circle
+                        cx={habPos.x + ancho - 10}
+                        cy={habPos.y + largo - 10}
+                        r="12"
+                        fill="#3b82f6"
+                        stroke="white"
+                        strokeWidth="2"
+                        className="hover:fill-blue-600 transition-colors"
+                      />
+                      <text
+                        x={habPos.x + ancho - 10}
+                        y={habPos.y + largo - 10}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fontSize="12"
+                        fill="white"
+                        fontWeight="bold"
+                        className="pointer-events-none"
+                      >
+                        ↻
+                      </text>
+                    </g>
+                  )}
                 </g>
               )
             })}
@@ -914,6 +1056,9 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
               <li>• <strong>Arrastra el fondo</strong> (fuera de habitaciones) para mover la vista</li>
               <li>• Activa &quot;Editar Posición&quot; para mover habitaciones</li>
               <li>• Haz <strong>clic en una habitación</strong> para editarla</li>
+              <li>• <strong>Clic derecho</strong> o botón ↻ para rotar habitación</li>
+              <li>• <strong>Snap activado</strong> alinea automáticamente al grid</li>
+              <li>• <strong>Exporta PNG</strong> para guardar el plano</li>
               <li>• <strong>Verde = colindancias</strong>, gris = paredes externas</li>
               <li>• Líneas con flechas muestran las medidas exactas</li>
             </ul>
