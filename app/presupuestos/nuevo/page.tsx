@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { ChefHat, Droplet, Square, Paintbrush, Hammer, MoreHorizontal } from 'lucide-react'
+import { ChefHat, Droplet, Square, Paintbrush, Hammer, MoreHorizontal, Save } from 'lucide-react'
 import { FormTrabajos } from './components/FormTrabajos'
 import { FormHabitaciones } from './components/FormHabitaciones'
 import { GeneradorPlano } from './components/GeneradorPlano'
@@ -50,6 +50,40 @@ export default function NuevoPresupuestoPage() {
     trabajos: 75,
     revision: 90
   }[paso]
+
+  // Cargar borrador desde localStorage al montar
+  useEffect(() => {
+    const borrador = localStorage.getItem('presupuesto-borrador')
+    if (borrador) {
+      try {
+        const datosBorrador = JSON.parse(borrador)
+        setDatos(datosBorrador)
+        toast.info('Borrador restaurado', {
+          description: 'Se ha recuperado el progreso anterior',
+          duration: 3000
+        })
+      } catch (e) {
+        console.error('Error al cargar borrador:', e)
+      }
+    }
+  }, [])
+
+  // Auto-guardar borrador cada 10 segundos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Solo guardar si hay datos mínimos
+      if (datos.cliente.nombre || datos.habitaciones.length > 0 || datos.trabajos.length > 0) {
+        localStorage.setItem('presupuesto-borrador', JSON.stringify(datos))
+      }
+    }, 10000) // 10 segundos
+
+    return () => clearInterval(interval)
+  }, [datos])
+
+  // Limpiar borrador después de guardar exitosamente
+  const limpiarBorrador = useCallback(() => {
+    localStorage.removeItem('presupuesto-borrador')
+  }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 md:p-8">

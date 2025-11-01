@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, X, Edit2, Square } from 'lucide-react'
+import { Plus, X, Edit2, Square, AlertTriangle } from 'lucide-react'
+import { toast } from 'sonner'
 import { PuertasVentanasEditor } from './PuertasVentanasEditor'
 
 export interface PuertaVentana {
@@ -71,7 +72,14 @@ export function FormHabitaciones({ habitaciones, onChange, alturaTechosGeneral, 
   }
 
   const eliminarHabitacion = (id: string) => {
-    onChange(habitaciones.filter(h => h.id !== id))
+    const habitacion = habitaciones.find(h => h.id === id)
+    if (!habitacion) return
+    
+    // Confirmación antes de eliminar
+    if (window.confirm(`¿Estás seguro de eliminar "${habitacion.nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+      onChange(habitaciones.filter(h => h.id !== id))
+      toast.success('Habitación eliminada')
+    }
   }
 
   const tiposHabitacion = [
@@ -426,7 +434,12 @@ function FormHabitacionDetalle({
       </div>
 
       <div className="flex gap-2">
-        <Button onClick={() => onSave(datos)}>Guardar</Button>
+        <Button onClick={() => {
+          onSave(datos)
+          toast.success('Habitación guardada correctamente', {
+            description: datos.nombre || 'Detalles actualizados'
+          })
+        }}>Guardar</Button>
         <Button variant="outline" onClick={onCancel}>Cancelar</Button>
       </div>
     </div>

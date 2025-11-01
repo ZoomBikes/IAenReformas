@@ -107,6 +107,9 @@ export function RevisionFinal({ datos, onGuardar, onGenerarPDF }: RevisionFinalP
         return
       }
       
+      // Limpiar borrador después de guardar exitosamente
+      localStorage.removeItem('presupuesto-borrador')
+      
       toast.success('Presupuesto guardado correctamente', {
         description: `ID: ${result.presupuestoId}`
       })

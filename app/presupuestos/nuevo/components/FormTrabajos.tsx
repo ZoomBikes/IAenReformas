@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { X, Plus } from 'lucide-react'
+import { toast } from 'sonner'
 import { calcularTarima, calcularPintura, type CalculoTarimaInput, type CalculoPinturaInput } from '@/lib/calculos'
 import type { Habitacion } from './FormHabitaciones'
 
@@ -61,16 +62,42 @@ export function FormTrabajos({ trabajos, onChange, habitaciones, datosEspacio }:
     }
 
     onChange(trabajosActualizados)
+    
+    const habitacion = habitaciones.find(h => h.id === habitacionId)
+    const tiposNombre: Record<string, string> = {
+      pintura_paredes: 'Pintura',
+      cambio_tarima: 'Tarima',
+      alicatado_azulejos: 'Alicatado',
+      fontaneria: 'Fontanería',
+      electricidad: 'Electricidad',
+      carpinteria: 'Carpintería',
+      otros: 'Otros trabajos'
+    }
+    
+    toast.success(`Servicio añadido`, {
+      description: `${tiposNombre[tipoServicio]} en ${habitacion?.nombre || 'habitación'}`,
+      duration: 2000
+    })
   }
 
   const eliminarServicio = (habitacionId: string, servicioId: string) => {
-    onChange(
-      trabajosInicializados.map(t =>
-        t.habitacionId === habitacionId
-          ? { ...t, servicios: t.servicios.filter(s => s.id !== servicioId) }
-          : t
+    const trabajo = trabajosInicializados.find(t => t.habitacionId === habitacionId)
+    const servicio = trabajo?.servicios.find(s => s.id === servicioId)
+    const habitacion = habitaciones.find(h => h.id === habitacionId)
+    
+    if (!servicio) return
+    
+    // Confirmación antes de eliminar
+    if (window.confirm(`¿Eliminar ${servicio.tipo.replace('_', ' ')} en ${habitacion?.nombre || 'habitación'}?`)) {
+      onChange(
+        trabajosInicializados.map(t =>
+          t.habitacionId === habitacionId
+            ? { ...t, servicios: t.servicios.filter(s => s.id !== servicioId) }
+            : t
+        )
       )
-    )
+      toast.success('Servicio eliminado')
+    }
   }
 
   const actualizarServicio = (habitacionId: string, servicioId: string, datos: any) => {
