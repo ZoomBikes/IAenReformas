@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FormTrabajos } from './components/FormTrabajos'
+import { FormHabitaciones } from './components/FormHabitaciones'
 
-type Paso = 'cliente' | 'obra' | 'espacio' | 'trabajos' | 'revision'
+type Paso = 'cliente' | 'obra' | 'espacio' | 'habitaciones' | 'trabajos' | 'revision'
 
 export default function NuevoPresupuestoPage() {
   const [paso, setPaso] = useState<Paso>('cliente')
@@ -25,23 +26,24 @@ export default function NuevoPresupuestoPage() {
       tipo: '',
       descripcion: ''
     },
-    // Paso 3: Espacio
+    // Paso 3: Espacio (info general)
     espacio: {
       metrosTotales: '',
-      numHabitaciones: '',
-      numBanos: '',
-      alturaTechos: '',
+      alturaTechos: '', // Valor por defecto para habitaciones
       estado: 'reciente' as 'nuevo' | 'reciente' | 'antiguo'
     },
-    // Paso 4: Trabajos
+    // Paso 4: Habitaciones (con medidas específicas)
+    habitaciones: [] as any[],
+    // Paso 5: Trabajos
     trabajos: [] as any[]
   })
 
   const porcentajeProgreso = {
     cliente: 0,
-    obra: 20,
-    espacio: 40,
-    trabajos: 70,
+    obra: 15,
+    espacio: 30,
+    habitaciones: 50,
+    trabajos: 75,
     revision: 90
   }[paso]
 
@@ -58,7 +60,7 @@ export default function NuevoPresupuestoPage() {
             />
           </div>
           <p className="text-sm text-muted-foreground mt-2">
-            Paso {Object.keys(porcentajeProgreso).indexOf(paso) + 1} de 5
+            Paso {['cliente', 'obra', 'espacio', 'habitaciones', 'trabajos', 'revision'].indexOf(paso) + 1} de 6
           </p>
         </div>
 
@@ -67,15 +69,17 @@ export default function NuevoPresupuestoPage() {
             <CardTitle>
               {paso === 'cliente' && 'Información del Cliente'}
               {paso === 'obra' && 'Tipo de Obra'}
-              {paso === 'espacio' && 'Características del Espacio'}
+              {paso === 'espacio' && 'Características Generales'}
+              {paso === 'habitaciones' && 'Habitaciones del Inmueble'}
               {paso === 'trabajos' && 'Trabajos a Realizar'}
               {paso === 'revision' && 'Revisión Final'}
             </CardTitle>
             <CardDescription>
               {paso === 'cliente' && 'Necesitamos los datos del cliente para el presupuesto'}
               {paso === 'obra' && '¿Qué tipo de reforma se va a realizar?'}
-              {paso === 'espacio' && 'Información detallada del inmueble para cálculos exactos'}
-              {paso === 'trabajos' && 'Añade los trabajos que se van a realizar'}
+              {paso === 'espacio' && 'Información general del inmueble'}
+              {paso === 'habitaciones' && 'Define cada habitación con sus medidas exactas para cálculos precisos'}
+              {paso === 'trabajos' && 'Añade los trabajos que se van a realizar en cada habitación'}
               {paso === 'revision' && 'Revisa toda la información antes de generar el presupuesto'}
             </CardDescription>
           </CardHeader>
@@ -98,10 +102,18 @@ export default function NuevoPresupuestoPage() {
                 onChange={(espacio) => setDatos({ ...datos, espacio })}
               />
             )}
+            {paso === 'habitaciones' && (
+              <FormHabitaciones 
+                habitaciones={datos.habitaciones}
+                onChange={(habitaciones) => setDatos({ ...datos, habitaciones })}
+                alturaTechosGeneral={datos.espacio.alturaTechos}
+              />
+            )}
             {paso === 'trabajos' && (
               <FormTrabajos 
                 trabajos={datos.trabajos}
                 onChange={(trabajos) => setDatos({ ...datos, trabajos })}
+                habitaciones={datos.habitaciones}
                 datosEspacio={datos.espacio}
               />
             )}
@@ -116,7 +128,7 @@ export default function NuevoPresupuestoPage() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  const pasos: Paso[] = ['cliente', 'obra', 'espacio', 'trabajos', 'revision']
+                  const pasos: Paso[] = ['cliente', 'obra', 'espacio', 'habitaciones', 'trabajos', 'revision']
                   const indice = pasos.indexOf(paso)
                   if (indice > 0) setPaso(pasos[indice - 1])
                 }}
@@ -126,7 +138,7 @@ export default function NuevoPresupuestoPage() {
               </Button>
               <Button
                 onClick={() => {
-                  const pasos: Paso[] = ['cliente', 'obra', 'espacio', 'trabajos', 'revision']
+                  const pasos: Paso[] = ['cliente', 'obra', 'espacio', 'habitaciones', 'trabajos', 'revision']
                   const indice = pasos.indexOf(paso)
                   if (indice < pasos.length - 1) setPaso(pasos[indice + 1])
                 }}
@@ -251,8 +263,14 @@ function FormObra({ datos, onChange }: { datos: any, onChange: (data: any) => vo
 function FormEspacio({ datos, onChange }: { datos: any, onChange: (data: any) => void }) {
   return (
     <div className="space-y-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+        <p className="text-sm text-blue-900">
+          <strong>💡 Información:</strong> En el siguiente paso definirás cada habitación con sus medidas específicas. 
+          Aquí solo necesitamos información general del inmueble.
+        </p>
+      </div>
       <div>
-        <Label htmlFor="metrosTotales">Metros cuadrados totales *</Label>
+        <Label htmlFor="metrosTotales">Metros cuadrados totales (aprox.)</Label>
         <Input
           id="metrosTotales"
           type="number"
@@ -260,32 +278,11 @@ function FormEspacio({ datos, onChange }: { datos: any, onChange: (data: any) =>
           value={datos.metrosTotales}
           onChange={(e) => onChange({ ...datos, metrosTotales: e.target.value })}
           placeholder="85"
-          required
         />
-        <p className="text-xs text-muted-foreground mt-1">Aproximado está bien si no se conoce exacto</p>
+        <p className="text-xs text-muted-foreground mt-1">Aproximado para referencia general</p>
       </div>
       <div>
-        <Label htmlFor="numHabitaciones">Número de habitaciones</Label>
-        <Input
-          id="numHabitaciones"
-          type="number"
-          value={datos.numHabitaciones}
-          onChange={(e) => onChange({ ...datos, numHabitaciones: e.target.value })}
-          placeholder="3"
-        />
-      </div>
-      <div>
-        <Label htmlFor="numBanos">Número de baños</Label>
-        <Input
-          id="numBanos"
-          type="number"
-          value={datos.numBanos}
-          onChange={(e) => onChange({ ...datos, numBanos: e.target.value })}
-          placeholder="2"
-        />
-      </div>
-      <div>
-        <Label htmlFor="alturaTechos">Altura de techos (metros) *</Label>
+        <Label htmlFor="alturaTechos">Altura de techos general (metros)</Label>
         <Input
           id="alturaTechos"
           type="number"
@@ -293,9 +290,10 @@ function FormEspacio({ datos, onChange }: { datos: any, onChange: (data: any) =>
           value={datos.alturaTechos}
           onChange={(e) => onChange({ ...datos, alturaTechos: e.target.value })}
           placeholder="2.70"
-          required
         />
-        <p className="text-xs text-muted-foreground mt-1">Necesario para calcular superficie de pintura exacta</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Se usará como valor por defecto para las habitaciones. Podrás cambiarla individualmente en cada habitación.
+        </p>
       </div>
       <div>
         <Label>Estado actual del inmueble *</Label>
@@ -318,6 +316,7 @@ function FormEspacio({ datos, onChange }: { datos: any, onChange: (data: any) =>
             </label>
           ))}
         </div>
+        <p className="text-xs text-muted-foreground mt-1">Afecta a los multiplicadores de precio</p>
       </div>
     </div>
   )
