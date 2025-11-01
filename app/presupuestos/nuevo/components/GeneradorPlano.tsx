@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Edit2, Maximize2, RotateCcw, ZoomIn, ZoomOut, Grid } from 'lucide-react'
+import { Edit2, Maximize2, RotateCcw, ZoomIn, ZoomOut, Grid, Move, Info, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Habitacion } from './FormHabitaciones'
 
@@ -22,29 +22,31 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
   const [posiciones, setPosiciones] = useState<Record<string, PosicionHabitacion>>({})
   const [modoEdicion, setModoEdicion] = useState(false)
   const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
   const [mostrarGrid, setMostrarGrid] = useState(true)
+  const [mostrarParedes, setMostrarParedes] = useState(true)
   const [habitacionArrastrando, setHabitacionArrastrando] = useState<string | null>(null)
   const [offsetArrastre, setOffsetArrastre] = useState({ x: 0, y: 0 })
+  const [isPanning, setIsPanning] = useState(false)
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 })
+  const svgRef = useRef<SVGSVGElement>(null)
 
   const escala = 25 // 1m = 25px para mejor visualización
-  const anchoCanvas = 1400
-  const altoCanvas = 1000
+  const grosorPared = 8 // Grosor de las paredes en pixels
 
   // Calcular posiciones iniciales basadas en colindancias
   const posicionesIniciales = useMemo(() => {
     const pos: Record<string, PosicionHabitacion> = {}
-    let currentX = 100
-    let currentY = 100
+    let currentX = 200
+    let currentY = 200
     let maxY = 0
 
     habitaciones.forEach((hab) => {
-      // Si ya tiene posición guardada, usarla
       if (posiciones[hab.id]) {
         pos[hab.id] = posiciones[hab.id]
         return
       }
 
-      // Si colinda con otra habitación, posicionarla adyacente
       if (hab.colindaCon && hab.colindaCon.length > 0) {
         const colindanteId = hab.colindaCon[0]
         const colindante = habitaciones.find(h => h.id === colindanteId)
@@ -53,39 +55,66 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
           const colindantePos = pos[colindanteId]
           const colindanteAncho = parseFloat(colindante.ancho || '0') * escala || 100
           
-          // Posicionar a la derecha de la colindante
           pos[hab.id] = {
-            x: colindantePos.x + colindanteAncho,
+            x: colindantePos.x + colindanteAncho + grosorPared,
             y: colindantePos.y
           }
           return
         }
       }
 
-      // Posicionamiento automático
       const ancho = parseFloat(hab.ancho || '0') * escala || 100
       const largo = parseFloat(hab.largo || '0') * escala || 80
 
-      if (currentX + ancho > anchoCanvas - 150) {
-        currentX = 100
-        currentY = maxY + 40
+      if (currentX + ancho > 2000) {
+        currentX = 200
+        currentY = maxY + 60
       }
 
       pos[hab.id] = { x: currentX, y: currentY }
       maxY = Math.max(maxY, currentY + largo)
-      currentX += ancho + 40
+      currentX += ancho + 60
     })
 
     return pos
   }, [habitaciones, posiciones])
 
-  // Inicializar posiciones
   useEffect(() => {
     if (Object.keys(posiciones).length === 0 && habitaciones.length > 0) {
       setPosiciones(posicionesIniciales)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [habitaciones.length])
+
+  // Zoom con rueda del ratón
+  const handleWheel = useCallback((e: React.WheelEvent<SVGSVGElement>) => {
+    if (!modoEdicion) {
+      e.preventDefault()
+      const delta = e.deltaY > 0 ? 0.9 : 1.1
+      setZoom(prev => Math.max(0.3, Math.min(3, prev * delta)))
+    }
+  }, [modoEdicion])
+
+  // Pan con arrastre del fondo
+  const handleMouseDownPan = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (!modoEdicion && e.target === e.currentTarget) {
+      setIsPanning(true)
+      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y })
+    }
+  }, [modoEdicion, pan])
+
+  const handleMouseMovePan = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (isPanning) {
+      setPan({
+        x: e.clientX - panStart.x,
+        y: e.clientY - panStart.y
+      })
+    }
+  }, [isPanning, panStart])
+
+  const handleMouseUpPan = useCallback(() => {
+    setIsPanning(false)
+  }, [])
 
   const handleMouseDown = useCallback((e: React.MouseEvent, habitacionId: string) => {
     if (!modoEdicion) return
@@ -98,274 +127,463 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
     if (!svg) return
 
     const svgRect = svg.getBoundingClientRect()
-    const offsetX = e.clientX - svgRect.left - (habPos.x * zoom)
-    const offsetY = e.clientY - svgRect.top - (habPos.y * zoom)
+    const mouseX = (e.clientX - svgRect.left - pan.x) / zoom
+    const mouseY = (e.clientY - svgRect.top - pan.y) / zoom
 
+    setOffsetArrastre({
+      x: mouseX - habPos.x,
+      y: mouseY - habPos.y
+    })
     setHabitacionArrastrando(habitacionId)
-    setOffsetArrastre({ x: offsetX, y: offsetY })
-  }, [modoEdicion, posiciones, posicionesIniciales, zoom])
+    e.stopPropagation()
+  }, [modoEdicion, posiciones, posicionesIniciales, pan, zoom])
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!modoEdicion || !habitacionArrastrando) return
+  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (habitacionArrastrando && modoEdicion) {
+      const svg = svgRef.current
+      if (!svg) return
 
-    const svg = e.currentTarget as SVGSVGElement
-    const svgRect = svg.getBoundingClientRect()
-    const newX = (e.clientX - svgRect.left - offsetArrastre.x) / zoom
-    const newY = (e.clientY - svgRect.top - offsetArrastre.y) / zoom
+      const svgRect = svg.getBoundingClientRect()
+      const mouseX = (e.clientX - svgRect.left - pan.x) / zoom
+      const mouseY = (e.clientY - svgRect.top - pan.y) / zoom
 
-    setPosiciones(prev => ({
-      ...prev,
-      [habitacionArrastrando]: { x: Math.max(0, newX), y: Math.max(0, newY) }
-    }))
-  }, [modoEdicion, habitacionArrastrando, offsetArrastre, zoom])
+      setPosiciones(prev => ({
+        ...prev,
+        [habitacionArrastrando]: {
+          x: Math.max(0, mouseX - offsetArrastre.x),
+          y: Math.max(0, mouseY - offsetArrastre.y)
+        }
+      }))
+    }
+  }, [habitacionArrastrando, modoEdicion, offsetArrastre, pan, zoom])
 
   const handleMouseUp = useCallback(() => {
-    if (habitacionArrastrando && onUpdatePosiciones) {
-      onUpdatePosiciones(posiciones)
+    if (habitacionArrastrando) {
+      onUpdatePosiciones?.(posiciones)
+      setHabitacionArrastrando(null)
     }
-    setHabitacionArrastrando(null)
   }, [habitacionArrastrando, posiciones, onUpdatePosiciones])
 
-  // Calcular colindancias visuales (paredes compartidas)
-  const calcularColindancias = useCallback((hab: Habitacion) => {
-    if (!hab.colindaCon || hab.colindaCon.length === 0) return []
+  // Calcular colindancias visuales
+  const colindancias = useMemo(() => {
+    const cols: Array<{
+      hab1: Habitacion
+      hab2: Habitacion
+      pared: 'superior' | 'inferior' | 'izquierda' | 'derecha'
+      pos: { x1: number, y1: number, x2: number, y2: number } | { x: number, y1: number, y2: number } | { y: number, x1: number, x2: number }
+    }> = []
 
-    const habPos = posiciones[hab.id] || posicionesIniciales[hab.id]
-    if (!habPos) return []
+    habitaciones.forEach(hab1 => {
+      if (!hab1.colindaCon) return
 
-    return hab.colindaCon.map(colindanteId => {
-      const colindante = habitaciones.find(h => h.id === colindanteId)
-      const colindantePos = posiciones[colindanteId] || posicionesIniciales[colindanteId]
+      hab1.colindaCon.forEach(colindanteId => {
+        const hab2 = habitaciones.find(h => h.id === colindanteId)
+        if (!hab2) return
 
-      if (!colindante || !colindantePos) return null
+        const pos1 = posiciones[hab1.id] || posicionesIniciales[hab1.id]
+        const pos2 = posiciones[hab2.id] || posicionesIniciales[hab2.id]
+        if (!pos1 || !pos2) return
 
-      const habAncho = parseFloat(hab.ancho || '0') * escala || 100
-      const habLargo = parseFloat(hab.largo || '0') * escala || 80
-      const colAncho = parseFloat(colindante.ancho || '0') * escala || 100
-      const colLargo = parseFloat(colindante.largo || '0') * escala || 80
+        const ancho1 = parseFloat(hab1.ancho || '0') * escala || 100
+        const largo1 = parseFloat(hab1.largo || '0') * escala || 80
+        const ancho2 = parseFloat(hab2.ancho || '0') * escala || 100
+        const largo2 = parseFloat(hab2.largo || '0') * escala || 80
 
-      const tolerancia = 3 // px de tolerancia para considerar colindante
+        // Detectar qué paredes están adyacentes
+        const distanciaX = Math.abs(pos1.x - pos2.x)
+        const distanciaY = Math.abs(pos1.y - pos2.y)
+        const margen = grosorPared * 2
 
-      // Pared derecha de hab con pared izquierda de colindante
-      if (Math.abs((habPos.x + habAncho) - colindantePos.x) < tolerancia) {
-        const inicioY = Math.max(habPos.y, colindantePos.y)
-        const finY = Math.min(habPos.y + habLargo, colindantePos.y + colLargo)
-        if (finY > inicioY) {
-          return {
-            tipo: 'vertical',
-            x: habPos.x + habAncho,
-            y1: inicioY,
-            y2: finY,
+        if (distanciaX < ancho1 / 2 && Math.abs(pos1.y + largo1 - pos2.y) < margen) {
+          // hab1 inferior con hab2 superior
+          const xInicio = Math.max(pos1.x, pos2.x)
+          const xFin = Math.min(pos1.x + ancho1, pos2.x + ancho2)
+          if (xFin > xInicio) {
+            cols.push({
+              hab1, hab2,
+              pared: 'inferior',
+              pos: {
+                x: (xInicio + xFin) / 2,
+                y1: pos1.y + largo1,
+                y2: pos2.y
+              }
+            })
+          }
+        } else if (distanciaX < ancho1 / 2 && Math.abs(pos2.y + largo2 - pos1.y) < margen) {
+          // hab1 superior con hab2 inferior
+          const xInicio = Math.max(pos1.x, pos2.x)
+          const xFin = Math.min(pos1.x + ancho1, pos2.x + ancho2)
+          if (xFin > xInicio) {
+            cols.push({
+              hab1, hab2,
+              pared: 'superior',
+              pos: {
+                x: (xInicio + xFin) / 2,
+                y1: pos1.y,
+                y2: pos2.y + largo2
+              }
+            })
+          }
+        } else if (distanciaY < largo1 / 2 && Math.abs(pos1.x + ancho1 - pos2.x) < margen) {
+          // hab1 derecha con hab2 izquierda
+          const yInicio = Math.max(pos1.y, pos2.y)
+          const yFin = Math.min(pos1.y + largo1, pos2.y + largo2)
+          if (yFin > yInicio) {
+            cols.push({
+              hab1, hab2,
+              pared: 'derecha',
+              pos: {
+                y: (yInicio + yFin) / 2,
+                x1: pos1.x + ancho1,
+                x2: pos2.x
+              }
+            })
+          }
+        } else if (distanciaY < largo1 / 2 && Math.abs(pos2.x + ancho2 - pos1.x) < margen) {
+          // hab1 izquierda con hab2 derecha
+          const yInicio = Math.max(pos1.y, pos2.y)
+          const yFin = Math.min(pos1.y + largo1, pos2.y + largo2)
+          if (yFin > yInicio) {
+            cols.push({
+              hab1, hab2,
+              pared: 'izquierda',
+              pos: {
+                y: (yInicio + yFin) / 2,
+                x1: pos1.x,
+                x2: pos2.x + ancho2
+              }
+            })
           }
         }
-      }
+      })
+    })
 
-      // Pared izquierda de hab con pared derecha de colindante
-      if (Math.abs(habPos.x - (colindantePos.x + colAncho)) < tolerancia) {
-        const inicioY = Math.max(habPos.y, colindantePos.y)
-        const finY = Math.min(habPos.y + habLargo, colindantePos.y + colLargo)
-        if (finY > inicioY) {
-          return {
-            tipo: 'vertical',
-            x: habPos.x,
-            y1: inicioY,
-            y2: finY,
-          }
-        }
-      }
+    return cols
+  }, [habitaciones, posiciones, posicionesIniciales])
 
-      // Pared inferior de hab con pared superior de colindante
-      if (Math.abs((habPos.y + habLargo) - colindantePos.y) < tolerancia) {
-        const inicioX = Math.max(habPos.x, colindantePos.x)
-        const finX = Math.min(habPos.x + habAncho, colindantePos.x + colAncho)
-        if (finX > inicioX) {
-          return {
-            tipo: 'horizontal',
-            y: habPos.y + habLargo,
-            x1: inicioX,
-            x2: finX,
-          }
-        }
-      }
-
-      // Pared superior de hab con pared inferior de colindante
-      if (Math.abs(habPos.y - (colindantePos.y + colLargo)) < tolerancia) {
-        const inicioX = Math.max(habPos.x, colindantePos.x)
-        const finX = Math.min(habPos.x + habAncho, colindantePos.x + colAncho)
-        if (finX > inicioX) {
-          return {
-            tipo: 'horizontal',
-            y: habPos.y,
-            x1: inicioX,
-            x2: finX,
-          }
-        }
-      }
-
-      return null
-    }).filter(Boolean)
-  }, [habitaciones, posiciones, posicionesIniciales, escala])
-
-  const colores = {
-    salon: { fill: '#e3f2fd', stroke: '#1976d2', text: '#0d47a1' },
-    dormitorio: { fill: '#f3e5f5', stroke: '#7b1fa2', text: '#4a148c' },
-    cocina: { fill: '#fff3e0', stroke: '#e65100', text: '#bf360c' },
-    bano: { fill: '#e0f2f1', stroke: '#00695c', text: '#004d40' },
-    pasillo: { fill: '#fafafa', stroke: '#616161', text: '#212121' },
-    otros: { fill: '#f5f5f5', stroke: '#424242', text: '#212121' }
+  const colores: Record<string, { fill: string, stroke: string, text: string }> = {
+    salon: { fill: '#fef3c7', stroke: '#f59e0b', text: '#92400e' },
+    dormitorio: { fill: '#e0e7ff', stroke: '#6366f1', text: '#3730a3' },
+    cocina: { fill: '#fce7f3', stroke: '#ec4899', text: '#9f1239' },
+    bano: { fill: '#dbeafe', stroke: '#3b82f6', text: '#1e3a8a' },
+    pasillo: { fill: '#f3f4f6', stroke: '#6b7280', text: '#374151' },
+    otros: { fill: '#f9fafb', stroke: '#9ca3af', text: '#6b7280' }
   }
 
-  if (habitaciones.length === 0) {
-    return (
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-900">
-          💡 Define habitaciones con sus medidas (ancho y largo) para generar el plano interactivo tipo AutoCAD.
-        </p>
-      </div>
-    )
+  const resetView = () => {
+    setZoom(1)
+    setPan({ x: 0, y: 0 })
   }
+
+  const centerView = () => {
+    if (habitaciones.length === 0) return
+    
+    const bounds = habitaciones.reduce((acc, hab) => {
+      const pos = posiciones[hab.id] || posicionesIniciales[hab.id]
+      if (!pos) return acc
+      
+      const ancho = parseFloat(hab.ancho || '0') * escala || 100
+      const largo = parseFloat(hab.largo || '0') * escala || 80
+      
+      return {
+        minX: Math.min(acc.minX, pos.x),
+        minY: Math.min(acc.minY, pos.y),
+        maxX: Math.max(acc.maxX, pos.x + ancho),
+        maxY: Math.max(acc.maxY, pos.y + largo)
+      }
+    }, { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity })
+
+    const centerX = (bounds.minX + bounds.maxX) / 2
+    const centerY = (bounds.minY + bounds.maxY) / 2
+    
+    setPan({
+      x: 700 - centerX,
+      y: 500 - centerY
+    })
+    setZoom(1)
+  }
+
+  // Calcular ancho y alto del canvas dinámicamente
+  const canvasBounds = useMemo(() => {
+    if (habitaciones.length === 0) return { width: 1400, height: 1000 }
+
+    const bounds = habitaciones.reduce((acc, hab) => {
+      const pos = posiciones[hab.id] || posicionesIniciales[hab.id]
+      if (!pos) return acc
+      
+      const ancho = parseFloat(hab.ancho || '0') * escala || 100
+      const largo = parseFloat(hab.largo || '0') * escala || 80
+      
+      return {
+        minX: Math.min(acc.minX, pos.x - 100),
+        minY: Math.min(acc.minY, pos.y - 100),
+        maxX: Math.max(acc.maxX, pos.x + ancho + 100),
+        maxY: Math.max(acc.maxY, pos.y + largo + 100)
+      }
+    }, { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity })
+
+    return {
+      width: Math.max(1400, bounds.maxX - bounds.minX),
+      height: Math.max(1000, bounds.maxY - bounds.minY),
+      minX: bounds.minX,
+      minY: bounds.minY
+    }
+  }, [habitaciones, posiciones, posicionesIniciales])
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              📐 Plano Interactivo (Estilo AutoCAD)
-            </CardTitle>
+            <CardTitle>📐 Plano Interactivo de la Vivienda</CardTitle>
             <CardDescription>
-              Arrastra habitaciones para organizarlas. Haz clic para editar. Las líneas verdes muestran colindancias exactas.
+              Visualiza y edita la distribución de las habitaciones. Haz clic en una habitación para editarla.
             </CardDescription>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2">
             <Button
-              variant={modoEdicion ? "default" : "outline"}
+              variant={modoEdicion ? 'default' : 'outline'}
               size="sm"
               onClick={() => {
                 setModoEdicion(!modoEdicion)
-                if (!modoEdicion) {
-                  toast.info('Modo edición activado. Arrastra las habitaciones para moverlas.')
-                } else {
+                if (modoEdicion) {
+                  onUpdatePosiciones?.(posiciones)
                   toast.success('Posiciones guardadas')
-                  if (onUpdatePosiciones) {
-                    onUpdatePosiciones(posiciones)
-                  }
+                } else {
+                  toast.info('Modo edición activado - arrastra las habitaciones')
                 }
               }}
             >
-              <Maximize2 className="h-4 w-4 mr-2" />
-              {modoEdicion ? 'Guardar' : 'Editar Posición'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setPosiciones({})
-                toast.info('Posiciones restablecidas')
-              }}
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Restablecer
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setMostrarGrid(!mostrarGrid)}
-            >
-              <Grid className="h-4 w-4 mr-2" />
-              {mostrarGrid ? 'Ocultar' : 'Mostrar'} Grid
+              <Move className="h-4 w-4 mr-1" />
+              {modoEdicion ? 'Guardar Posición' : 'Editar Posición'}
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="border-2 border-gray-300 rounded-lg bg-gray-50 overflow-auto relative" 
-             style={{ height: `${altoCanvas}px`, width: '100%' }}>
+        {/* Controles superiores */}
+        <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setZoom(prev => Math.min(3, prev + 0.1))}
+              disabled={zoom >= 3}
+            >
+              <ZoomIn className="h-3 w-3" />
+            </Button>
+            <span className="text-sm font-medium min-w-[60px] text-center">
+              {Math.round(zoom * 100)}%
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setZoom(prev => Math.max(0.3, prev - 0.1))}
+              disabled={zoom <= 0.3}
+            >
+              <ZoomOut className="h-3 w-3" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={resetView} title="Resetear zoom">
+              <RotateCcw className="h-3 w-3" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={centerView} title="Centrar vista">
+              <Maximize2 className="h-3 w-3" />
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2 ml-auto">
+            <Button
+              variant={mostrarGrid ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setMostrarGrid(!mostrarGrid)}
+            >
+              <Grid className="h-3 w-3 mr-1" />
+              Grid
+            </Button>
+            <Button
+              variant={mostrarParedes ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setMostrarParedes(!mostrarParedes)}
+            >
+              🧱 Paredes
+            </Button>
+          </div>
+        </div>
+
+        {/* Viewport del plano */}
+        <div className="border-2 border-slate-300 rounded-lg overflow-hidden bg-white relative" style={{ height: '600px' }}>
           <svg
-            width={anchoCanvas}
-            height={altoCanvas}
-            viewBox={`0 0 ${anchoCanvas} ${altoCanvas}`}
-            style={{ background: mostrarGrid ? '#fafafa' : '#ffffff', transform: `scale(${zoom})`, transformOrigin: 'top left' }}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            className="cursor-crosshair"
+            ref={svgRef}
+            width="100%"
+            height="100%"
+            viewBox={`0 0 ${canvasBounds.width} ${canvasBounds.height}`}
+            style={{
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              transformOrigin: '0 0',
+              cursor: modoEdicion ? (isPanning ? 'grabbing' : 'grab') : (isPanning ? 'grabbing' : 'default')
+            }}
+            onWheel={handleWheel}
+            onMouseDown={handleMouseDownPan}
+            onMouseMove={(e) => {
+              handleMouseMove(e)
+              handleMouseMovePan(e)
+            }}
+            onMouseUp={() => {
+              handleMouseUp()
+              handleMouseUpPan()
+            }}
+            onMouseLeave={() => {
+              handleMouseUp()
+              handleMouseUpPan()
+            }}
+            className="select-none"
           >
+            {/* Definiciones SVG */}
+            <defs>
+              <marker
+                id="arrow-end"
+                markerWidth="10"
+                markerHeight="10"
+                refX="9"
+                refY="3"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <path d="M0,0 L0,6 L9,3 z" fill="#333" />
+              </marker>
+              <marker
+                id="arrow-start"
+                markerWidth="10"
+                markerHeight="10"
+                refX="1"
+                refY="3"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <path d="M9,0 L9,6 L0,3 z" fill="#333" />
+              </marker>
+              <marker
+                id="arrow-end-vert"
+                markerWidth="10"
+                markerHeight="10"
+                refX="3"
+                refY="9"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <path d="M0,0 L6,0 L3,9 z" fill="#333" />
+              </marker>
+              <marker
+                id="arrow-start-vert"
+                markerWidth="10"
+                markerHeight="10"
+                refX="3"
+                refY="1"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <path d="M0,9 L6,9 L3,0 z" fill="#333" />
+              </marker>
+              
+              {/* Filtros para sombras */}
+              <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
+                <feOffset dx="2" dy="2" result="offsetblur" />
+                <feComponentTransfer>
+                  <feFuncA type="linear" slope="0.3" />
+                </feComponentTransfer>
+                <feMerge>
+                  <feMergeNode />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              
+              {/* Patrón de grid */}
+              <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+                <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#e5e7eb" strokeWidth="0.5" />
+              </pattern>
+            </defs>
+
             {/* Grid de fondo */}
             {mostrarGrid && (
-              <defs>
-                <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
-                  <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#e5e7eb" strokeWidth="0.5"/>
-                </pattern>
-              </defs>
+              <rect
+                x={canvasBounds.minX || 0}
+                y={canvasBounds.minY || 0}
+                width={canvasBounds.width}
+                height={canvasBounds.height}
+                fill="url(#grid)"
+                opacity="0.5"
+              />
             )}
-            {mostrarGrid && <rect width="100%" height="100%" fill="url(#grid)" />}
 
-            {/* Dibujar colindancias (paredes compartidas) */}
-            {habitaciones.map((hab) => {
-              const colindancias = calcularColindancias(hab)
-              return colindancias.map((col, idx) => {
-                if (!col) return null
-                if (col.tipo === 'vertical') {
-                  return (
-                    <g key={`${hab.id}-col-${idx}`}>
-                      {/* Línea de colindancia */}
-                      <line
-                        x1={col.x}
-                        y1={col.y1}
-                        x2={col.x}
-                        y2={col.y2}
-                        stroke="#22c55e"
-                        strokeWidth="6"
-                        strokeDasharray="8,4"
-                        opacity={0.8}
-                      />
-                      {/* Etiqueta */}
-                      <text
-                        x={col.x}
-                        y={((col as any).y1 + (col as any).y2) / 2}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        fontSize="10"
-                        fill="#166534"
-                        fontWeight="bold"
-                        className="pointer-events-none"
-                      >
-                        COLINDA
-                      </text>
-                    </g>
-                  )
-                } else {
-                  return (
-                    <g key={`${hab.id}-col-${idx}`}>
-                      {/* Línea de colindancia */}
-                      <line
-                        x1={col.x1}
-                        y1={col.y}
-                        x2={col.x2}
-                        y2={col.y}
-                        stroke="#22c55e"
-                        strokeWidth="6"
-                        strokeDasharray="8,4"
-                        opacity={0.8}
-                      />
-                      {/* Etiqueta */}
-                      <text
-                        x={((col as any).x1 + (col as any).x2) / 2}
-                        y={(col as any).y}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        fontSize="10"
-                        fill="#166534"
-                        fontWeight="bold"
-                        className="pointer-events-none"
-                      >
-                        COLINDA
-                      </text>
-                    </g>
-                  )
-                }
-              })
+            {/* Colindancias - Paredes compartidas */}
+            {colindancias.map((col, idx) => {
+              if ('x' in col.pos) {
+                return (
+                  <g key={`col-${idx}`}>
+                    {mostrarParedes && (
+                      <>
+                        {/* Pared compartida */}
+                        <line
+                          x1={col.pos.x}
+                          y1={col.pos.y1}
+                          x2={col.pos.x}
+                          y2={col.pos.y2}
+                          stroke="#22c55e"
+                          strokeWidth={grosorPared}
+                          strokeLinecap="round"
+                          opacity={0.6}
+                        />
+                        {/* Etiqueta */}
+                        <text
+                          x={col.pos.x}
+                          y={(col.pos.y1 + col.pos.y2) / 2}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fontSize="9"
+                          fill="#166534"
+                          fontWeight="bold"
+                          className="pointer-events-none"
+                        >
+                          COLINDA
+                        </text>
+                      </>
+                    )}
+                  </g>
+                )
+              } else if ('y' in col.pos) {
+                return (
+                  <g key={`col-${idx}`}>
+                    {mostrarParedes && (
+                      <>
+                        <line
+                          x1={(col.pos as any).x1}
+                          y1={col.pos.y}
+                          x2={(col.pos as any).x2}
+                          y2={col.pos.y}
+                          stroke="#22c55e"
+                          strokeWidth={grosorPared}
+                          strokeLinecap="round"
+                          opacity={0.6}
+                        />
+                        <text
+                          x={((col.pos as any).x1 + (col.pos as any).x2) / 2}
+                          y={col.pos.y}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fontSize="9"
+                          fill="#166534"
+                          fontWeight="bold"
+                          className="pointer-events-none"
+                        >
+                          COLINDA
+                        </text>
+                      </>
+                    )}
+                  </g>
+                )
+              }
+              return null
             })}
 
             {/* Habitaciones */}
@@ -377,7 +595,6 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
               const largo = parseFloat(hab.largo || '0') * escala || 80
               const color = colores[hab.tipo] || colores.otros
 
-              // Calcular medidas si no existen
               const anchoDisplay = hab.ancho || `${Math.sqrt(parseFloat(hab.metrosCuadrados || '0')).toFixed(1)}`
               const largoDisplay = hab.largo || `${Math.sqrt(parseFloat(hab.metrosCuadrados || '0')).toFixed(1)}`
 
@@ -392,17 +609,16 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                     }
                   }}
                 >
-                  {/* Sombra (solo cuando se arrastra) */}
-                  {habitacionArrastrando === hab.id && (
-                    <rect
-                      x={habPos.x + 3}
-                      y={habPos.y + 3}
-                      width={ancho}
-                      height={largo}
-                      fill="rgba(0,0,0,0.2)"
-                      rx="4"
-                    />
-                  )}
+                  {/* Sombra */}
+                  <rect
+                    x={habPos.x + 4}
+                    y={habPos.y + 4}
+                    width={ancho}
+                    height={largo}
+                    fill="rgba(0,0,0,0.1)"
+                    rx="6"
+                    filter="url(#shadow)"
+                  />
 
                   {/* Habitación */}
                   <rect
@@ -412,50 +628,94 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                     height={largo}
                     fill={color.fill}
                     stroke={color.stroke}
-                    strokeWidth={modoEdicion ? "3" : "2"}
-                    rx="4"
+                    strokeWidth={modoEdicion ? "4" : "3"}
+                    rx="6"
                     className={modoEdicion ? 'hover:opacity-80 transition-opacity' : ''}
                   />
 
+                  {/* Paredes visibles */}
+                  {mostrarParedes && (
+                    <>
+                      {/* Pared superior */}
+                      <line
+                        x1={habPos.x}
+                        y1={habPos.y}
+                        x2={habPos.x + ancho}
+                        y2={habPos.y}
+                        stroke="#374151"
+                        strokeWidth={grosorPared}
+                        strokeLinecap="round"
+                        opacity={0.8}
+                      />
+                      {/* Pared inferior */}
+                      <line
+                        x1={habPos.x}
+                        y1={habPos.y + largo}
+                        x2={habPos.x + ancho}
+                        y2={habPos.y + largo}
+                        stroke="#374151"
+                        strokeWidth={grosorPared}
+                        strokeLinecap="round"
+                        opacity={0.8}
+                      />
+                      {/* Pared izquierda */}
+                      <line
+                        x1={habPos.x}
+                        y1={habPos.y}
+                        x2={habPos.x}
+                        y2={habPos.y + largo}
+                        stroke="#374151"
+                        strokeWidth={grosorPared}
+                        strokeLinecap="round"
+                        opacity={0.8}
+                      />
+                      {/* Pared derecha */}
+                      <line
+                        x1={habPos.x + ancho}
+                        y1={habPos.y}
+                        x2={habPos.x + ancho}
+                        y2={habPos.y + largo}
+                        stroke="#374151"
+                        strokeWidth={grosorPared}
+                        strokeLinecap="round"
+                        opacity={0.8}
+                      />
+                    </>
+                  )}
+
                   {/* Puertas y Ventanas */}
                   {hab.puertasVentanas?.map((pv) => {
-                    const anchoPVReal = pv.ancho || (pv.tipo === 'puerta' ? 0.9 : 1.2) // Metros
-                    const anchoPV = anchoPVReal * escala // Pixels
-                    const grosorLinea = 6 // Grosor de la línea de la pared en pixels
+                    const anchoPVReal = pv.ancho || (pv.tipo === 'puerta' ? 0.9 : 1.2)
+                    const anchoPV = anchoPVReal * escala
                     
                     let x = 0
                     let y = 0
                     let anchoRect = 0
                     let altoRect = 0
 
-                    // Calcular posición según la pared
                     switch (pv.pared) {
                       case 'superior':
-                        // Pared superior: posición horizontal
                         x = habPos.x + (ancho * pv.posicion / 100) - anchoPV / 2
-                        y = habPos.y - grosorLinea / 2
+                        y = habPos.y - grosorPared / 2
                         anchoRect = anchoPV
-                        altoRect = grosorLinea
+                        altoRect = grosorPared
                         break
                       case 'inferior':
-                        // Pared inferior: posición horizontal
                         x = habPos.x + (ancho * pv.posicion / 100) - anchoPV / 2
-                        y = habPos.y + largo - grosorLinea / 2
+                        y = habPos.y + largo - grosorPared / 2
                         anchoRect = anchoPV
-                        altoRect = grosorLinea
+                        altoRect = grosorPared
                         break
                       case 'izquierda':
-                        // Pared izquierda: posición vertical
-                        x = habPos.x - grosorLinea / 2
+                        x = habPos.x - grosorPared / 2
                         y = habPos.y + (largo * pv.posicion / 100) - anchoPV / 2
-                        anchoRect = grosorLinea
+                        anchoRect = grosorPared
                         altoRect = anchoPV
                         break
                       case 'derecha':
-                        // Pared derecha: posición vertical
-                        x = habPos.x + ancho - grosorLinea / 2
+                        x = habPos.x + ancho - grosorPared / 2
                         y = habPos.y + (largo * pv.posicion / 100) - anchoPV / 2
-                        anchoRect = grosorLinea
+                        anchoRect = grosorPared
                         altoRect = anchoPV
                         break
                     }
@@ -465,17 +725,17 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
 
                     return (
                       <g key={`pv-${pv.id}`}>
-                        {/* Abertura en la pared - se muestra como una interrupción */}
+                        {/* Abertura en la pared */}
                         <rect
                           x={x}
                           y={y}
                           width={anchoRect}
                           height={altoRect}
-                          fill={pv.tipo === 'puerta' ? '#f3f4f6' : '#e0f2fe'}
-                          stroke={pv.tipo === 'puerta' ? '#4b5563' : '#0284c7'}
-                          strokeWidth={pv.tipo === 'puerta' ? "2.5" : "2"}
+                          fill={pv.tipo === 'puerta' ? '#ffffff' : '#e0f2fe'}
+                          stroke={pv.tipo === 'puerta' ? '#1f2937' : '#0284c7'}
+                          strokeWidth={pv.tipo === 'puerta' ? "3" : "2"}
                           strokeDasharray={pv.tipo === 'ventana' ? '3,2' : '0'}
-                          rx="1"
+                          rx="2"
                           className="pointer-events-none"
                         />
                         {/* Símbolo */}
@@ -484,24 +744,25 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                           y={centerY}
                           textAnchor="middle"
                           dominantBaseline="middle"
-                          fontSize={pv.tipo === 'puerta' ? "14" : "12"}
+                          fontSize={pv.tipo === 'puerta' ? "16" : "14"}
                           fill={pv.tipo === 'puerta' ? '#374151' : '#0284c7'}
                           fontWeight="bold"
                           className="pointer-events-none"
                         >
                           {pv.tipo === 'puerta' ? '🚪' : '🪟'}
                         </text>
-                        {/* Etiqueta con medidas opcional */}
+                        {/* Etiqueta con medidas */}
                         {(pv.ancho || pv.alto) && (
                           <text
                             x={centerX}
                             y={pv.pared === 'superior' || pv.pared === 'inferior' 
-                              ? (pv.pared === 'superior' ? y - 5 : y + altoRect + 12)
-                              : (pv.pared === 'izquierda' ? x - 8 : x + anchoRect + 8)}
+                              ? (pv.pared === 'superior' ? y - 6 : y + altoRect + 14)
+                              : (pv.pared === 'izquierda' ? x - 10 : x + anchoRect + 10)}
                             textAnchor={pv.pared === 'superior' || pv.pared === 'inferior' ? "middle" : (pv.pared === 'izquierda' ? "end" : "start")}
                             dominantBaseline={pv.pared === 'superior' || pv.pared === 'inferior' ? "auto" : "middle"}
-                            fontSize="8"
+                            fontSize="9"
                             fill="#6b7280"
+                            fontWeight="600"
                             className="pointer-events-none"
                           >
                             {anchoPVReal}m
@@ -515,22 +776,22 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                   <g className="pointer-events-none">
                     <line
                       x1={habPos.x}
-                      y1={habPos.y - 15}
+                      y1={habPos.y - 20}
                       x2={habPos.x + ancho}
-                      y2={habPos.y - 15}
-                      stroke="#333"
-                      strokeWidth="1.5"
+                      y2={habPos.y - 20}
+                      stroke="#1f2937"
+                      strokeWidth="2"
                       markerEnd="url(#arrow-end)"
                       markerStart="url(#arrow-start)"
                     />
                     <text
                       x={habPos.x + ancho / 2}
-                      y={habPos.y - 18}
+                      y={habPos.y - 23}
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      fontSize="11"
+                      fontSize="12"
                       fontWeight="bold"
-                      fill="#1a1a1a"
+                      fill="#111827"
                       className="font-mono"
                     >
                       {anchoDisplay}m
@@ -540,25 +801,25 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                   {/* Medidas - Largo (lateral izquierdo) */}
                   <g className="pointer-events-none">
                     <line
-                      x1={habPos.x - 15}
+                      x1={habPos.x - 20}
                       y1={habPos.y}
-                      x2={habPos.x - 15}
+                      x2={habPos.x - 20}
                       y2={habPos.y + largo}
-                      stroke="#333"
-                      strokeWidth="1.5"
+                      stroke="#1f2937"
+                      strokeWidth="2"
                       markerEnd="url(#arrow-end-vert)"
                       markerStart="url(#arrow-start-vert)"
                     />
                     <text
-                      x={habPos.x - 25}
+                      x={habPos.x - 30}
                       y={habPos.y + largo / 2}
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      fontSize="11"
+                      fontSize="12"
                       fontWeight="bold"
-                      fill="#1a1a1a"
+                      fill="#111827"
                       className="font-mono"
-                      transform={`rotate(-90 ${habPos.x - 25} ${habPos.y + largo / 2})`}
+                      transform={`rotate(-90 ${habPos.x - 30} ${habPos.y + largo / 2})`}
                     >
                       {largoDisplay}m
                     </text>
@@ -567,10 +828,10 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                   {/* Nombre y m² en el centro */}
                   <text
                     x={habPos.x + ancho / 2}
-                    y={habPos.y + largo / 2 - 8}
+                    y={habPos.y + largo / 2 - 10}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fontSize="14"
+                    fontSize="16"
                     fontWeight="bold"
                     fill={color.text}
                     className="pointer-events-none"
@@ -579,10 +840,10 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                   </text>
                   <text
                     x={habPos.x + ancho / 2}
-                    y={habPos.y + largo / 2 + 10}
+                    y={habPos.y + largo / 2 + 12}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fontSize="12"
+                    fontSize="13"
                     fontWeight="600"
                     fill={color.text}
                     className="pointer-events-none"
@@ -593,152 +854,68 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                   {/* Indicador de colindancias */}
                   {hab.colindaCon && hab.colindaCon.length > 0 && (
                     <circle
-                      cx={habPos.x + ancho - 8}
-                      cy={habPos.y + 8}
-                      r="8"
+                      cx={habPos.x + ancho - 10}
+                      cy={habPos.y + 10}
+                      r="10"
                       fill="#22c55e"
                       stroke="white"
                       strokeWidth="2"
                       className="pointer-events-none"
-                    />
-                  )}
-                  {hab.colindaCon && hab.colindaCon.length > 0 && (
-                    <text
-                      x={habPos.x + ancho - 8}
-                      y={habPos.y + 8}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      fontSize="8"
-                      fontWeight="bold"
-                      fill="white"
-                      className="pointer-events-none"
                     >
-                      {hab.colindaCon.length}
-                    </text>
-                  )}
-
-                  {/* Botón editar (solo cuando no está en modo edición) */}
-                  {!modoEdicion && (
-                    <g
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        if (onEditHabitacion) {
-                          onEditHabitacion(hab)
-                        }
-                      }}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <circle
-                        cx={habPos.x + ancho - 15}
-                        cy={habPos.y + largo - 15}
-                        r="12"
-                        fill="white"
-                        stroke={color.stroke}
-                        strokeWidth="2"
-                      />
-                      <text
-                        x={habPos.x + ancho - 15}
-                        y={habPos.y + largo - 15}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        fontSize="12"
-                        fill={color.stroke}
-                        fontWeight="bold"
-                      >
-                        ✎
-                      </text>
-                    </g>
+                      <title>{hab.colindaCon.length} colindancia(s)</title>
+                    </circle>
                   )}
                 </g>
               )
             })}
-
-            {/* Marcadores de flecha para medidas */}
-            <defs>
-              <marker id="arrow-end" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-                <path d="M0,0 L0,6 L9,3 z" fill="#333" />
-              </marker>
-              <marker id="arrow-start" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto" markerUnits="strokeWidth">
-                <path d="M9,0 L9,6 L0,3 z" fill="#333" />
-              </marker>
-              <marker id="arrow-end-vert" markerWidth="10" markerHeight="10" refX="3" refY="9" orient="auto" markerUnits="strokeWidth">
-                <path d="M0,0 L6,0 L3,9 z" fill="#333" />
-              </marker>
-              <marker id="arrow-start-vert" markerWidth="10" markerHeight="10" refX="3" refY="0" orient="auto" markerUnits="strokeWidth">
-                <path d="M0,9 L6,9 L3,0 z" fill="#333" />
-              </marker>
-            </defs>
           </svg>
         </div>
 
-        {/* Controles */}
-        <div className="mt-4 flex flex-wrap justify-between items-center gap-4">
-          {/* Zoom */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-              disabled={zoom <= 0.5}
-            >
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-            <span className="px-4 py-2 text-sm font-medium min-w-[100px] text-center">
-              {Math.round(zoom * 100)}%
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-              disabled={zoom >= 2}
-            >
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Info */}
-          <div className="text-sm text-muted-foreground">
-            {habitaciones.length} habitación{habitaciones.length !== 1 ? 'es' : ''} | 
-            Escala: 1m = {escala}px
-          </div>
-        </div>
-
-        {/* Leyenda */}
-        <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
-          <div className="border rounded-lg p-3 bg-white">
-            <h4 className="font-semibold mb-2 text-xs">Tipos de Habitación</h4>
-            <div className="space-y-1 text-xs">
-              {Object.entries(colores).slice(0, 3).map(([tipo, color]) => (
-                <div key={tipo} className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded border"
-                    style={{ backgroundColor: color.fill, borderColor: color.stroke }}
-                  />
-                  <span className="capitalize">{tipo}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="border rounded-lg p-3 bg-white">
-            <h4 className="font-semibold mb-2 text-xs">Símbolos</h4>
-            <div className="space-y-1 text-xs">
+        {/* Leyenda y ayuda */}
+        <div className="mt-4 grid md:grid-cols-2 gap-4">
+          <div className="border rounded-lg p-4 bg-slate-50">
+            <h4 className="font-semibold mb-3 text-sm text-slate-900 flex items-center gap-2">
+              <Info className="h-4 w-4" />
+              Leyenda
+            </h4>
+            <div className="space-y-2 text-xs">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-green-500 rounded-full" />
-                <span>Colindancia</span>
+                <div className="w-4 h-4 rounded bg-yellow-100 border-2 border-yellow-500"></div>
+                <span>Salón</span>
               </div>
               <div className="flex items-center gap-2">
-                <Edit2 className="h-3 w-3" />
-                <span>Editar habitación</span>
+                <div className="w-4 h-4 rounded bg-indigo-100 border-2 border-indigo-500"></div>
+                <span>Dormitorio</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-pink-100 border-2 border-pink-500"></div>
+                <span>Cocina</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-blue-100 border-2 border-blue-500"></div>
+                <span>Baño</span>
+              </div>
+              <div className="flex items-center gap-2 mt-3 pt-2 border-t">
+                <span className="text-green-600 font-bold">━━━</span>
+                <span>Colindancias (paredes compartidas)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600 font-bold">━━━</span>
+                <span>Paredes externas</span>
               </div>
             </div>
           </div>
-          <div className="border rounded-lg p-3 bg-blue-50">
-            <h4 className="font-semibold mb-2 text-xs text-blue-900">Consejos</h4>
+          <div className="border rounded-lg p-4 bg-blue-50">
+            <h4 className="font-semibold mb-3 text-xs text-blue-900 flex items-center gap-2">
+              💡 Consejos
+            </h4>
             <ul className="text-xs text-blue-800 space-y-1">
-              <li>• Activa &quot;Editar Posición&quot; para mover</li>
-              <li>• Haz clic para editar datos</li>
-              <li>• Líneas verdes = paredes compartidas</li>
-              <li>• Medidas se actualizan automáticamente</li>
+              <li>• Usa la <strong>rueda del ratón</strong> para hacer zoom</li>
+              <li>• <strong>Arrastra el fondo</strong> (fuera de habitaciones) para mover la vista</li>
+              <li>• Activa &quot;Editar Posición&quot; para mover habitaciones</li>
+              <li>• Haz <strong>clic en una habitación</strong> para editarla</li>
+              <li>• <strong>Verde = colindancias</strong>, gris = paredes externas</li>
+              <li>• Líneas con flechas muestran las medidas exactas</li>
             </ul>
           </div>
         </div>
