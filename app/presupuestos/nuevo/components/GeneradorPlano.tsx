@@ -3,12 +3,21 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Edit2, Maximize2, RotateCw, RotateCcw, ZoomIn, ZoomOut, Grid, Move, Info, Download, Layers, Ruler, CheckCircle, Sparkles, StickyNote, FileText, Box, Eye } from 'lucide-react'
+import { Edit2, Maximize2, RotateCw, RotateCcw, ZoomIn, ZoomOut, Grid, Move, Info, Download, Layers, Ruler, CheckCircle, Sparkles, StickyNote, FileText, Box, Eye, Undo, Redo, Wrench, FileDown } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Habitacion } from './FormHabitaciones'
 
+interface TrabajoHabitacion {
+  habitacionId: string
+  servicios?: Array<{
+    tipo: string
+    descripcion?: string
+  }>
+}
+
 interface GeneradorPlanoProps {
   habitaciones: Habitacion[]
+  trabajos?: TrabajoHabitacion[]
   onEditHabitacion?: (habitacion: Habitacion) => void
   onUpdatePosiciones?: (posiciones: Record<string, { x: number, y: number }>) => void
 }
@@ -38,7 +47,7 @@ interface Plantilla {
   }>
 }
 
-export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosiciones }: GeneradorPlanoProps) {
+export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, onUpdatePosiciones }: GeneradorPlanoProps) {
   const [posiciones, setPosiciones] = useState<Record<string, PosicionHabitacion>>({})
   const [modoEdicion, setModoEdicion] = useState(false)
   const [zoom, setZoom] = useState(1)
@@ -64,6 +73,8 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
   const [anotaciones, setAnotaciones] = useState<Anotacion[]>([])
   const [mostrarPlantillas, setMostrarPlantillas] = useState(false)
   const [vista3D, setVista3D] = useState(false)
+  const [historialPosiciones, setHistorialPosiciones] = useState<Array<Record<string, PosicionHabitacion>>>([])
+  const [indiceHistorial, setIndiceHistorial] = useState(-1)
   const [habitacionArrastrando, setHabitacionArrastrando] = useState<string | null>(null)
   const [habitacionSeleccionada, setHabitacionSeleccionada] = useState<string | null>(null)
   const [offsetArrastre, setOffsetArrastre] = useState({ x: 0, y: 0 })
@@ -122,10 +133,20 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
 
   useEffect(() => {
     if (Object.keys(posiciones).length === 0 && habitaciones.length > 0) {
-      setPosiciones(posicionesIniciales)
+      const posInit = posicionesIniciales
+      setPosiciones(posInit)
+      guardarEnHistorial(posInit)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [habitaciones.length])
+
+  // Actualizar historial cuando cambian posiciones manualmente
+  useEffect(() => {
+    if (Object.keys(posiciones).length > 0 && historialPosiciones.length === 0) {
+      guardarEnHistorial(posiciones)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Zoom con rueda del ratón
   const handleWheel = useCallback((e: React.WheelEvent<SVGSVGElement>) => {
@@ -204,12 +225,49 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
     }
   }, [habitacionArrastrando, modoEdicion, offsetArrastre, pan, zoom, snapToGrid, gridSize])
 
+  const guardarEnHistorial = useCallback((pos: Record<string, PosicionHabitacion>) => {
+    setHistorialPosiciones(prev => {
+      // Eliminar elementos después del índice actual si hay
+      const nuevoHistorial = prev.slice(0, indiceHistorial + 1)
+      // Añadir nueva posición
+      nuevoHistorial.push({ ...pos })
+      // Limitar a 50 estados
+      return nuevoHistorial.slice(-50)
+    })
+    setIndiceHistorial(prev => Math.min(prev + 1, 49))
+  }, [indiceHistorial])
+
+  const deshacer = useCallback(() => {
+    if (indiceHistorial > 0) {
+      const nuevoIndice = indiceHistorial - 1
+      setIndiceHistorial(nuevoIndice)
+      setPosiciones({ ...historialPosiciones[nuevoIndice] })
+      onUpdatePosiciones?.(historialPosiciones[nuevoIndice])
+      toast.success('Cambio deshecho')
+    } else {
+      toast.info('No hay más cambios para deshacer')
+    }
+  }, [indiceHistorial, historialPosiciones, onUpdatePosiciones])
+
+  const rehacer = useCallback(() => {
+    if (indiceHistorial < historialPosiciones.length - 1) {
+      const nuevoIndice = indiceHistorial + 1
+      setIndiceHistorial(nuevoIndice)
+      setPosiciones({ ...historialPosiciones[nuevoIndice] })
+      onUpdatePosiciones?.(historialPosiciones[nuevoIndice])
+      toast.success('Cambio rehecho')
+    } else {
+      toast.info('No hay más cambios para rehacer')
+    }
+  }, [indiceHistorial, historialPosiciones, onUpdatePosiciones])
+
   const handleMouseUp = useCallback(() => {
     if (habitacionArrastrando) {
+      guardarEnHistorial(posiciones)
       onUpdatePosiciones?.(posiciones)
       setHabitacionArrastrando(null)
     }
-  }, [habitacionArrastrando, posiciones, onUpdatePosiciones])
+  }, [habitacionArrastrando, posiciones, onUpdatePosiciones, guardarEnHistorial])
 
   // Calcular colindancias visuales
   const colindancias = useMemo(() => {
@@ -376,6 +434,23 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
       minY: bounds.minY
     }
   }, [habitaciones, posiciones, posicionesIniciales])
+
+  // Obtener trabajos de una habitación
+  const obtenerTrabajosHabitacion = useCallback((habitacionId: string) => {
+    const trabajo = trabajos.find(t => t.habitacionId === habitacionId)
+    return trabajo?.servicios || []
+  }, [trabajos])
+
+  // Iconos por tipo de trabajo
+  const iconosTrabajos: Record<string, string> = {
+    cambio_tarima: '🪵',
+    pintura_paredes: '🎨',
+    alicatado_azulejos: '🧱',
+    fontaneria: '🚿',
+    electricidad: '⚡',
+    carpinteria: '🪚',
+    otros: '🔧'
+  }
 
   // Rotar habitación (intercambiar ancho/largo y ajustar posición)
   const rotarHabitacion = useCallback((habitacionId: string) => {
@@ -572,6 +647,87 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
     return { errores, advertencias }
   }, [habitaciones])
 
+  // Exportar plano como PDF usando canvas (método simplificado)
+  const exportarAPDF = useCallback(() => {
+    const svg = svgRef.current
+    if (!svg) {
+      toast.error('No se pudo exportar el plano')
+      return
+    }
+
+    // Usar el mismo método que PNG pero abrir ventana de impresión
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const svgClone = svg.cloneNode(true) as SVGSVGElement
+    svgClone.setAttribute('width', canvasBounds.width.toString())
+    svgClone.setAttribute('height', canvasBounds.height.toString())
+    svgClone.setAttribute('viewBox', `0 0 ${canvasBounds.width} ${canvasBounds.height}`)
+    svgClone.style.transform = 'none'
+    
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    const img = new Image()
+    
+    canvas.width = canvasBounds.width * 2
+    canvas.height = canvasBounds.height * 2
+    
+    img.onload = () => {
+      if (ctx) {
+        ctx.fillStyle = 'white'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const printWindow = window.open('', '_blank')
+            if (printWindow) {
+              const blobUrl = URL.createObjectURL(blob)
+              printWindow.document.write(`
+                <html>
+                  <head>
+                    <title>Plano de Vivienda</title>
+                    <style>
+                      @media print {
+                        body { margin: 0; padding: 10px; }
+                        h1 { font-size: 18px; margin-bottom: 10px; }
+                        p { font-size: 12px; }
+                      }
+                    </style>
+                  </head>
+                  <body style="margin:20px;text-align:center;font-family:Arial;">
+                    <h1>Plano de Vivienda</h1>
+                    <img src="${blobUrl}" style="max-width:100%;height:auto;border:1px solid #ccc;" />
+                    <p>Generado: ${new Date().toLocaleDateString('es-ES')}</p>
+                    <script>
+                      window.onload = function() {
+                        setTimeout(function() {
+                          window.print();
+                        }, 250);
+                      };
+                    </script>
+                  </body>
+                </html>
+              `)
+              printWindow.document.close()
+              toast.success('Ventana de impresión abierta. Selecciona "Guardar como PDF"')
+              setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+            } else {
+              // Fallback: descargar PNG
+              const link = document.createElement('a')
+              link.href = URL.createObjectURL(blob)
+              link.download = `plano-vivienda-${new Date().toISOString().split('T')[0]}.png`
+              link.click()
+              toast.info('Bloqueador de ventanas activo. PNG descargado. Convierte a PDF manualmente.')
+            }
+          }
+        }, 'image/png', 1.0)
+      }
+    }
+    
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+    img.src = url
+  }, [canvasBounds])
+
   // Exportar plano como PNG
   const exportarAPNG = useCallback(() => {
     const svg = svgRef.current
@@ -746,11 +902,40 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
             <Button
               variant="outline"
               size="sm"
+              onClick={deshacer}
+              disabled={indiceHistorial <= 0}
+              title="Deshacer último cambio"
+            >
+              <Undo className="h-3 w-3 mr-1" />
+              Undo
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={rehacer}
+              disabled={indiceHistorial >= historialPosiciones.length - 1}
+              title="Rehacer cambio"
+            >
+              <Redo className="h-3 w-3 mr-1" />
+              Redo
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={exportarAPNG}
               title="Exportar plano como imagen PNG"
             >
               <Download className="h-3 w-3 mr-1" />
               PNG
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportarAPDF}
+              title="Exportar plano como PDF profesional"
+            >
+              <FileDown className="h-3 w-3 mr-1" />
+              PDF
             </Button>
             <Button
               variant={mostrarMenuCapas ? 'default' : 'outline'}
@@ -1531,7 +1716,7 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                   {/* Nombre y m² en el centro */}
                   <text
                     x={habPos.x + ancho / 2}
-                    y={habPos.y + largo / 2 - 10}
+                    y={habPos.y + largo / 2 - 20}
                     textAnchor="middle"
                     dominantBaseline="middle"
                     fontSize="16"
@@ -1543,7 +1728,7 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                   </text>
                   <text
                     x={habPos.x + ancho / 2}
-                    y={habPos.y + largo / 2 + 12}
+                    y={habPos.y + largo / 2}
                     textAnchor="middle"
                     dominantBaseline="middle"
                     fontSize="13"
@@ -1553,6 +1738,54 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
                   >
                     {hab.metrosCuadrados} m²
                   </text>
+
+                  {/* Iconos de trabajos previstos */}
+                  {obtenerTrabajosHabitacion(hab.id).length > 0 && (
+                    <g className="pointer-events-none">
+                      <rect
+                        x={habPos.x + 5}
+                        y={habPos.y + largo - 35}
+                        width={Math.min(ancho - 10, obtenerTrabajosHabitacion(hab.id).length * 25 + 10)}
+                        height="30"
+                        fill="rgba(59, 130, 246, 0.9)"
+                        stroke="#3b82f6"
+                        strokeWidth="1.5"
+                        rx="4"
+                      />
+                      <text
+                        x={habPos.x + 10}
+                        y={habPos.y + largo - 15}
+                        fontSize="10"
+                        fill="white"
+                        fontWeight="bold"
+                      >
+                        Trabajos:
+                      </text>
+                      {obtenerTrabajosHabitacion(hab.id).slice(0, 4).map((servicio, idx) => (
+                        <text
+                          key={idx}
+                          x={habPos.x + 15 + (idx * 25)}
+                          y={habPos.y + largo - 5}
+                          fontSize="14"
+                          fill="white"
+                          className="pointer-events-none"
+                        >
+                          {iconosTrabajos[servicio.tipo] || '🔧'}
+                        </text>
+                      ))}
+                      {obtenerTrabajosHabitacion(hab.id).length > 4 && (
+                        <text
+                          x={habPos.x + 15 + (4 * 25)}
+                          y={habPos.y + largo - 5}
+                          fontSize="10"
+                          fill="white"
+                          fontWeight="bold"
+                        >
+                          +{obtenerTrabajosHabitacion(hab.id).length - 4}
+                        </text>
+                      )}
+                    </g>
+                  )}
 
                   {/* Indicador de colindancias */}
                   {hab.colindaCon && hab.colindaCon.length > 0 && (
@@ -1656,6 +1889,9 @@ export function GeneradorPlano({ habitaciones, onEditHabitacion, onUpdatePosicio
               <li>• <strong>Notas</strong>: añade anotaciones haciendo clic</li>
               <li>• <strong>Plantillas</strong>: aplica distribuciones predefinidas</li>
               <li>• <strong>Vista 3D</strong>: visualización isométrica</li>
+              <li>• <strong>Undo/Redo</strong>: deshacer y rehacer cambios</li>
+              <li>• <strong>Iconos azules</strong>: trabajos previstos por habitación</li>
+              <li>• <strong>Exporta PDF</strong>: guarda como PDF para presupuestos</li>
               <li>• <strong>Verde = colindancias</strong>, gris = paredes externas</li>
               <li>• Líneas con flechas muestran las medidas exactas</li>
             </ul>

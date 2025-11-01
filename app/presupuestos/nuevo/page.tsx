@@ -124,6 +124,13 @@ export default function NuevoPresupuestoPage() {
                   <div className="mt-6">
                     <GeneradorPlano 
                       habitaciones={datos.habitaciones}
+                      trabajos={datos.trabajos.map(t => ({
+                        habitacionId: t.habitacionId,
+                        servicios: t.servicios.map((s: any) => ({
+                          tipo: s.tipo,
+                          descripcion: s.datos?.descripcion || s.tipo
+                        }))
+                      }))}
                       onEditHabitacion={(habitacion) => {
                         // Scroll a la habitación y highlight
                         const element = document.getElementById(`habitacion-${habitacion.id}`)
