@@ -76,11 +76,15 @@ model Presupuesto {
   // Información del proyecto
   direccionObra   String
   tipoObra        TipoObra
+  descripcionObra String?   // Descripción de la obra
   metrosTotales   Float
   numHabitaciones Int
   numBanos        Int
   alturaTechos    Float     // En metros, necesario para cálculos
   estadoInmueble  EstadoInmueble
+  
+  // Datos estructurados para visualización
+  habitaciones    Json?     // Array de habitaciones con medidas (JSON)
   
   // Cálculos (realizados por sistema, no IA)
   subtotal        Float
