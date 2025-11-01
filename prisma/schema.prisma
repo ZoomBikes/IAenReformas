@@ -1,0 +1,180 @@
+// Prisma Schema - Sistema de Presupuestos de Reformas
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TipoObra {
+  COCINA
+  BANO
+  SUELOS
+  PINTURA
+  REFORMA_COMPLETA
+  OTROS
+}
+
+enum EstadoInmueble {
+  NUEVO
+  RECIENTE
+  ANTIGUO
+}
+
+enum TipoTrabajo {
+  CAMBIO_TARIMA
+  PINTURA_PAREDES
+  AZULEJOS
+  FONTANERIA
+  ELECTRICIDAD
+  CARPINTERIA
+  OTROS
+}
+
+enum Calidad {
+  BASICA
+  ESTANDAR
+  PREMIUM
+}
+
+enum UnidadMedida {
+  METROS_CUADRADOS
+  METROS_LINEALES
+  UNIDADES
+}
+
+enum EstadoPresupuesto {
+  BORRADOR
+  ENVIADO
+  ACEPTADO
+  RECHAZADO
+}
+
+model Cliente {
+  id            String    @id @default(cuid())
+  nombre        String
+  telefono      String?
+  email         String?
+  direccion     String?
+  tipo          String?   // particular, empresa, etc.
+  notas         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  presupuestos  Presupuesto[]
+
+  @@map("clientes")
+}
+
+model Presupuesto {
+  id              String    @id @default(cuid())
+  clienteId       String
+  cliente         Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  
+  // Información del proyecto
+  direccionObra   String
+  tipoObra        TipoObra
+  metrosTotales   Float
+  numHabitaciones Int
+  numBanos        Int
+  alturaTechos    Float     // En metros, necesario para cálculos
+  estadoInmueble  EstadoInmueble
+  
+  // Cálculos (realizados por sistema, no IA)
+  subtotal        Float
+  iva             Float     @default(21.0) // Porcentaje fijo
+  total           Float
+  
+  // Explicación generada por IA (solo texto descriptivo)
+  explicacionIA   String?   @db.Text
+  
+  // Metadata
+  estado          EstadoPresupuesto @default(BORRADOR)
+  fechaCreacion   DateTime  @default(now())
+  fechaValidez    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  trabajos        TrabajoPresupuesto[]
+
+  @@map("presupuestos")
+}
+
+model TrabajoPresupuesto {
+  id              String    @id @default(cuid())
+  presupuestoId   String
+  presupuesto     Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+  
+  tipoTrabajo     TipoTrabajo
+  descripcion     String
+  cantidad        Float     // m², unidades, etc.
+  unidad          UnidadMedida
+  precioUnitario  Float
+  precioTotal     Float
+  
+  // Configuraciones específicas del trabajo
+  calidad         Calidad   @default(ESTANDAR)
+  
+  // Flags específicos según tipo de trabajo
+  necesitaAlisado Boolean   @default(false)
+  necesitaPicado  Boolean   @default(false)
+  necesitaImprimacion Boolean @default(true)
+  numManosPintura Int       @default(2)
+  
+  // Información adicional para cálculos exactos
+  perimetro       Float?    // Para pintura (m lineales)
+  superficiePuertas Float? // m² a restar
+  superficieVentanas Float? // m² a restar
+  tieneSoladoExistente Boolean @default(false)
+  
+  // Explicación generada por IA (solo para este trabajo)
+  explicacionIA   String?   @db.Text
+  
+  createdAt       DateTime  @default(now())
+  
+  componentes     ComponenteTrabajo[]
+
+  @@map("trabajos_presupuesto")
+}
+
+model ComponenteTrabajo {
+  id              String    @id @default(cuid())
+  trabajoId       String
+  trabajo         TrabajoPresupuesto @relation(fields: [trabajoId], references: [id], onDelete: Cascade)
+  
+  nombre          String    // Ej: "Picado de solado", "Autonivelado"
+  descripcion     String?
+  cantidad        Float
+  unidad          String
+  precioUnitario  Float
+  precioTotal     Float
+  
+  orden           Int       // Para ordenar en el desglose
+  
+  createdAt       DateTime  @default(now())
+
+  @@map("componentes_trabajo")
+}
+
+model PlantillaTrabajo {
+  id                String    @id @default(cuid())
+  tipo              TipoTrabajo
+  nombre            String
+  
+  // Trabajos relacionados que se activan automáticamente
+  trabajosRelacionados Json   // Array de componentes que se añaden automáticamente
+  
+  // Precios base por calidad
+  preciosBase       Json      // { basica: {...}, estandar: {...}, premium: {...} }
+  
+  // Reglas de cálculo
+  multiplicadores   Json?     // Para ajustes según condiciones
+  
+  activo            Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("plantillas_trabajo")
+}
