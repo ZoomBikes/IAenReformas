@@ -18,6 +18,7 @@ export interface Habitacion {
   perimetro?: string
   numPuertas: string
   numVentanas: string
+  colindaCon?: string[] // IDs de habitaciones que colindan
   notas?: string
 }
 
@@ -88,6 +89,7 @@ export function FormHabitaciones({ habitaciones, onChange, alturaTechosGeneral }
             {editando === habitacion.id ? (
               <FormHabitacionDetalle
                 habitacion={habitacion}
+                todasHabitaciones={habitaciones}
                 onSave={(datos) => {
                   actualizarHabitacion(habitacion.id, datos)
                   setEditando(null)
@@ -155,11 +157,13 @@ export function FormHabitaciones({ habitaciones, onChange, alturaTechosGeneral }
 function FormHabitacionDetalle({ 
   habitacion, 
   onSave, 
-  onCancel 
+  onCancel,
+  todasHabitaciones
 }: { 
   habitacion: Habitacion
   onSave: (datos: Partial<Habitacion>) => void
   onCancel: () => void
+  todasHabitaciones: Habitacion[]
 }) {
   const [datos, setDatos] = useState(habitacion)
 
@@ -172,14 +176,19 @@ function FormHabitacionDetalle({
     { value: 'otros', label: '🔧 Otros' },
   ]
 
-  // Calcular perímetro si hay ancho y largo
-  const calcularPerimetro = () => {
+  // Calcular metros cuadrados y perímetro si hay ancho y largo
+  const calcularDesdeMedidas = () => {
     if (datos.ancho && datos.largo) {
       const ancho = parseFloat(datos.ancho)
       const largo = parseFloat(datos.largo)
       if (!isNaN(ancho) && !isNaN(largo)) {
-        const perimetro = (ancho + largo) * 2
-        setDatos({ ...datos, perimetro: perimetro.toFixed(2) })
+        const metrosCuadrados = (ancho * largo).toFixed(2)
+        const perimetro = ((ancho + largo) * 2).toFixed(2)
+        setDatos({ 
+          ...datos, 
+          metrosCuadrados: metrosCuadrados,
+          perimetro: perimetro
+        })
       }
     }
   }
@@ -227,14 +236,21 @@ function FormHabitacionDetalle({
             value={datos.metrosCuadrados}
             onChange={(e) => {
               setDatos({ ...datos, metrosCuadrados: e.target.value })
-              // Limpiar perímetro si cambia metros
-              if (datos.perimetro) {
-                setDatos({ ...datos, metrosCuadrados: e.target.value, perimetro: '' })
-              }
             }}
             placeholder="25"
             required
+            disabled={datos.ancho && datos.largo ? true : false}
           />
+          {datos.ancho && datos.largo && (
+            <p className="text-xs text-green-700 mt-1">
+              ✓ Calculado automáticamente desde ancho × largo
+            </p>
+          )}
+          {!datos.ancho || !datos.largo ? (
+            <p className="text-xs text-muted-foreground mt-1">
+              O ingresa ancho y largo abajo para calcularlo automáticamente
+            </p>
+          ) : null}
         </div>
         <div>
           <Label htmlFor="altura-hab">Altura de techos (metros) *</Label>
@@ -254,7 +270,9 @@ function FormHabitacionDetalle({
       </div>
 
       <div className="border-t pt-4">
-        <p className="text-sm font-medium mb-2">Medidas exactas (opcional pero recomendado)</p>
+        <p className="text-sm font-medium mb-2">
+          📐 Medidas exactas (recomendado - calculará m² automáticamente)
+        </p>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="ancho-hab">Ancho (metros)</Label>
@@ -265,7 +283,7 @@ function FormHabitacionDetalle({
               value={datos.ancho || ''}
               onChange={(e) => {
                 setDatos({ ...datos, ancho: e.target.value })
-                calcularPerimetro()
+                calcularDesdeMedidas()
               }}
               placeholder="4.5"
             />
@@ -279,16 +297,20 @@ function FormHabitacionDetalle({
               value={datos.largo || ''}
               onChange={(e) => {
                 setDatos({ ...datos, largo: e.target.value })
-                calcularPerimetro()
+                calcularDesdeMedidas()
               }}
               placeholder="5.5"
             />
           </div>
         </div>
-        {datos.perimetro && (
-          <p className="text-xs text-muted-foreground mt-2">
-            ✓ Perímetro calculado: {datos.perimetro} m
-          </p>
+        {datos.ancho && datos.largo && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-2">
+            <p className="text-sm text-green-900">
+              <strong>✓ Cálculos automáticos:</strong><br />
+              • Metros cuadrados: {datos.metrosCuadrados} m²<br />
+              {datos.perimetro && `• Perímetro: ${datos.perimetro} m`}
+            </p>
+          </div>
         )}
       </div>
 
@@ -325,6 +347,44 @@ function FormHabitacionDetalle({
             placeholder="2"
           />
         </div>
+      </div>
+
+      <div>
+        <Label htmlFor="colinda-con">Colinda con (selecciona habitaciones adyacentes)</Label>
+        <div className="mt-2 space-y-2 border rounded-lg p-3 bg-slate-50">
+          {todasHabitaciones.filter(h => h.id !== habitacion.id).length > 0 ? (
+            todasHabitaciones
+              .filter(h => h.id !== habitacion.id)
+              .map((hab) => {
+                const colinda = datos.colindaCon?.includes(hab.id) || false
+                return (
+                  <label key={hab.id} className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={colinda}
+                      onChange={(e) => {
+                        const colindaCon = datos.colindaCon || []
+                        if (e.target.checked) {
+                          setDatos({ ...datos, colindaCon: [...colindaCon, hab.id] })
+                        } else {
+                          setDatos({ ...datos, colindaCon: colindaCon.filter(id => id !== hab.id) })
+                        }
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">{hab.nombre}</span>
+                  </label>
+                )
+              })
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Añade más habitaciones para poder seleccionar colindancias
+            </p>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Esto ayudará a generar un plano automático de la vivienda
+        </p>
       </div>
 
       <div>

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FormTrabajos } from './components/FormTrabajos'
 import { FormHabitaciones } from './components/FormHabitaciones'
+import { GeneradorPlano } from './components/GeneradorPlano'
 
 type Paso = 'cliente' | 'obra' | 'espacio' | 'habitaciones' | 'trabajos' | 'revision'
 
@@ -34,8 +35,8 @@ export default function NuevoPresupuestoPage() {
     },
     // Paso 4: Habitaciones (con medidas específicas)
     habitaciones: [] as any[],
-    // Paso 5: Trabajos
-    trabajos: [] as any[]
+    // Paso 5: Trabajos (servicios por habitación)
+    trabajos: [] as Array<{ habitacionId: string, servicios: any[] }>
   })
 
   const porcentajeProgreso = {
@@ -103,11 +104,18 @@ export default function NuevoPresupuestoPage() {
               />
             )}
             {paso === 'habitaciones' && (
-              <FormHabitaciones 
-                habitaciones={datos.habitaciones}
-                onChange={(habitaciones) => setDatos({ ...datos, habitaciones })}
-                alturaTechosGeneral={datos.espacio.alturaTechos}
-              />
+              <>
+                <FormHabitaciones 
+                  habitaciones={datos.habitaciones}
+                  onChange={(habitaciones) => setDatos({ ...datos, habitaciones })}
+                  alturaTechosGeneral={datos.espacio.alturaTechos}
+                />
+                {datos.habitaciones.length > 0 && (
+                  <div className="mt-6">
+                    <GeneradorPlano habitaciones={datos.habitaciones} />
+                  </div>
+                )}
+              </>
             )}
             {paso === 'trabajos' && (
               <FormTrabajos 
