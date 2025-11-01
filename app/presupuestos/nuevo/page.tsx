@@ -111,10 +111,36 @@ export default function NuevoPresupuestoPage() {
                   habitaciones={datos.habitaciones}
                   onChange={(habitaciones) => setDatos({ ...datos, habitaciones })}
                   alturaTechosGeneral={datos.espacio.alturaTechos}
+                  onEditFromPlano={(habitacion) => {
+                    // Encontrar y editar la habitación desde el plano
+                    const habIndex = datos.habitaciones.findIndex(h => h.id === habitacion.id)
+                    if (habIndex >= 0) {
+                      // Trigger edición - esto se manejará en FormHabitaciones
+                      toast.info(`Edita "${habitacion.nombre}" en la lista de arriba`)
+                    }
+                  }}
                 />
                 {datos.habitaciones.length > 0 && (
                   <div className="mt-6">
-                    <GeneradorPlano habitaciones={datos.habitaciones} />
+                    <GeneradorPlano 
+                      habitaciones={datos.habitaciones}
+                      onEditHabitacion={(habitacion) => {
+                        // Scroll a la habitación y highlight
+                        const element = document.getElementById(`habitacion-${habitacion.id}`)
+                        if (element) {
+                          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                          element.classList.add('ring-2', 'ring-primary', 'ring-offset-2')
+                          setTimeout(() => {
+                            element.classList.remove('ring-2', 'ring-primary', 'ring-offset-2')
+                          }, 2000)
+                        }
+                        toast.info(`Edita "${habitacion.nombre}" arriba para cambiar sus datos`)
+                      }}
+                      onUpdatePosiciones={(posiciones) => {
+                        // Guardar posiciones en el estado (opcional, para persistencia)
+                        console.log('Posiciones actualizadas:', posiciones)
+                      }}
+                    />
                   </div>
                 )}
               </>

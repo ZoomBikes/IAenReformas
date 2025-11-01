@@ -26,9 +26,10 @@ interface FormHabitacionesProps {
   habitaciones: Habitacion[]
   onChange: (habitaciones: Habitacion[]) => void
   alturaTechosGeneral: string // Para usar como valor por defecto
+  onEditFromPlano?: (habitacion: Habitacion) => void
 }
 
-export function FormHabitaciones({ habitaciones, onChange, alturaTechosGeneral }: FormHabitacionesProps) {
+export function FormHabitaciones({ habitaciones, onChange, alturaTechosGeneral, onEditFromPlano }: FormHabitacionesProps) {
   const [editando, setEditando] = useState<string | null>(null)
   const [mostrarFormulario, setMostrarFormulario] = useState(false)
 
@@ -84,7 +85,7 @@ export function FormHabitaciones({ habitaciones, onChange, alturaTechosGeneral }
 
       {/* Lista de habitaciones */}
       {habitaciones.map((habitacion) => (
-        <Card key={habitacion.id}>
+        <Card key={habitacion.id} id={`habitacion-${habitacion.id}`} className="transition-all">
           <CardContent className="p-4">
             {editando === habitacion.id ? (
               <FormHabitacionDetalle
