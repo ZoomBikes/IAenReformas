@@ -779,15 +779,15 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex justify-between items-start">
+      <CardHeader className="p-4 md:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
           <div>
-            <CardTitle>📐 Plano Interactivo de la Vivienda</CardTitle>
-            <CardDescription>
-              Visualiza y edita la distribución de las habitaciones. Haz clic en una habitación para editarla.
+            <CardTitle className="text-lg md:text-xl">📐 Plano Interactivo de la Vivienda</CardTitle>
+            <CardDescription className="text-sm">
+              Visualiza y edita la distribución de las habitaciones
             </CardDescription>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <Button
               variant={modoEdicion ? 'default' : 'outline'}
               size="sm"
@@ -800,16 +800,17 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
                   toast.info('Modo edición activado - arrastra las habitaciones')
                 }
               }}
+              className="flex-1 sm:flex-none"
             >
               <Move className="h-4 w-4 mr-1" />
-              {modoEdicion ? 'Guardar Posición' : 'Editar Posición'}
+              {modoEdicion ? 'Guardar' : 'Editar'}
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 md:p-6">
         {/* Controles superiores */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-6 p-4 glass-white border border-blue-200/50 rounded-2xl shadow-lg shadow-blue-500/10">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 md:gap-3 mb-4 md:mb-6 p-2 sm:p-3 md:p-4 glass-white border border-blue-200/50 rounded-xl md:rounded-2xl shadow-lg shadow-blue-500/10 overflow-x-auto">
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -819,7 +820,7 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
             >
               <ZoomIn className="h-3 w-3" />
             </Button>
-            <span className="text-sm font-medium min-w-[60px] text-center">
+            <span className="text-xs sm:text-sm font-medium min-w-[50px] sm:min-w-[60px] text-center">
               {Math.round(zoom * 100)}%
             </span>
             <Button
@@ -848,23 +849,24 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
               }}
               title="Alinear al grid al arrastrar"
             >
-              <Grid className="h-3 w-3 mr-1" />
-              Snap
+              <Grid className="h-3 w-3 hidden sm:block sm:mr-1" />
+              <span className="text-xs sm:text-sm">Snap</span>
             </Button>
             <Button
               variant={mostrarGrid ? 'default' : 'outline'}
               size="sm"
               onClick={() => setMostrarGrid(!mostrarGrid)}
             >
-              <Grid className="h-3 w-3 mr-1" />
-              Grid
+              <Grid className="h-3 w-3 hidden sm:block sm:mr-1" />
+              <span className="text-xs sm:text-sm">Grid</span>
             </Button>
             <Button
               variant={mostrarParedes ? 'default' : 'outline'}
               size="sm"
               onClick={() => setMostrarParedes(!mostrarParedes)}
             >
-              🧱 Paredes
+              <span className="text-xs sm:text-sm hidden sm:inline">🧱</span>
+              <span className="text-xs sm:text-sm">Paredes</span>
             </Button>
             <Button
               variant={modoMedir ? 'default' : 'outline'}
@@ -878,8 +880,8 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
               }}
               title="Medir distancias entre puntos"
             >
-              <Ruler className="h-3 w-3 mr-1" />
-              Medir
+              <Ruler className="h-3 w-3 hidden sm:block sm:mr-1" />
+              <span className="text-xs sm:text-sm">Medir</span>
             </Button>
             <Button
               variant="outline"
@@ -887,8 +889,8 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
               onClick={autoOrganizar}
               title="Auto-organizar habitaciones según colindancias"
             >
-              <Sparkles className="h-3 w-3 mr-1" />
-              Auto
+              <Sparkles className="h-3 w-3 hidden sm:block sm:mr-1" />
+              <span className="text-xs sm:text-sm">Auto</span>
             </Button>
             <Button
               variant="outline"
@@ -896,8 +898,8 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
               onClick={validarMedidas}
               title="Validar medidas y detectar inconsistencias"
             >
-              <CheckCircle className="h-3 w-3 mr-1" />
-              Validar
+              <CheckCircle className="h-3 w-3 hidden sm:block sm:mr-1" />
+              <span className="text-xs sm:text-sm">Validar</span>
             </Button>
             <Button
               variant="outline"
@@ -906,8 +908,8 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
               disabled={indiceHistorial <= 0}
               title="Deshacer último cambio"
             >
-              <Undo className="h-3 w-3 mr-1" />
-              Undo
+              <Undo className="h-3 w-3 hidden sm:block sm:mr-1" />
+              <span className="text-xs sm:text-sm">Undo</span>
             </Button>
             <Button
               variant="outline"
@@ -916,35 +918,38 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
               disabled={indiceHistorial >= historialPosiciones.length - 1}
               title="Rehacer cambio"
             >
-              <Redo className="h-3 w-3 mr-1" />
-              Redo
+              <Redo className="h-3 w-3 hidden sm:block sm:mr-1" />
+              <span className="text-xs sm:text-sm">Redo</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={exportarAPNG}
               title="Exportar plano como imagen PNG"
+              className="hidden sm:flex"
             >
-              <Download className="h-3 w-3 mr-1" />
-              PNG
+              <Download className="h-3 w-3 sm:mr-1" />
+              <span className="text-xs sm:text-sm">PNG</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={exportarAPDF}
               title="Exportar plano como PDF profesional"
+              className="hidden sm:flex"
             >
-              <FileDown className="h-3 w-3 mr-1" />
-              PDF
+              <FileDown className="h-3 w-3 sm:mr-1" />
+              <span className="text-xs sm:text-sm">PDF</span>
             </Button>
             <Button
               variant={mostrarMenuCapas ? 'default' : 'outline'}
               size="sm"
               onClick={() => setMostrarMenuCapas(!mostrarMenuCapas)}
               title="Capas de visibilidad"
+              className="hidden sm:flex"
             >
-              <Layers className="h-3 w-3 mr-1" />
-              Capas
+              <Layers className="h-3 w-3 sm:mr-1" />
+              <span className="text-xs sm:text-sm">Capas</span>
             </Button>
             <Button
               variant={modoAnotacion ? 'default' : 'outline'}
@@ -956,18 +961,20 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
                 }
               }}
               title="Añadir anotaciones y notas"
+              className="hidden sm:flex"
             >
-              <StickyNote className="h-3 w-3 mr-1" />
-              Notas
+              <StickyNote className="h-3 w-3 sm:mr-1" />
+              <span className="text-xs sm:text-sm">Notas</span>
             </Button>
             <Button
               variant={mostrarPlantillas ? 'default' : 'outline'}
               size="sm"
               onClick={() => setMostrarPlantillas(!mostrarPlantillas)}
               title="Aplicar plantillas de distribución"
+              className="hidden sm:flex"
             >
-              <FileText className="h-3 w-3 mr-1" />
-              Plantillas
+              <FileText className="h-3 w-3 sm:mr-1" />
+              <span className="text-xs sm:text-sm">Plantillas</span>
             </Button>
             <Button
               variant={vista3D ? 'default' : 'outline'}
@@ -980,8 +987,8 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
               }}
               title="Vista isométrica 3D"
             >
-              <Eye className="h-3 w-3 mr-1" />
-              3D
+              <Eye className="h-3 w-3 hidden sm:block sm:mr-1" />
+              <span className="text-xs sm:text-sm">3D</span>
             </Button>
           </div>
           {/* Menú de Capas */}
@@ -1096,7 +1103,7 @@ export function GeneradorPlano({ habitaciones, trabajos = [], onEditHabitacion, 
         </div>
 
         {/* Viewport del plano */}
-        <div className="border-2 border-blue-200/50 rounded-2xl overflow-hidden bg-gradient-to-br from-blue-50/30 to-white relative shadow-xl shadow-blue-500/10" style={{ height: '600px' }}>
+        <div className="border-2 border-blue-200/50 rounded-xl md:rounded-2xl overflow-hidden bg-gradient-to-br from-blue-50/30 to-white relative shadow-xl shadow-blue-500/10" style={{ minHeight: '300px', height: '400px' }}>
           <svg
             ref={svgRef}
             width="100%"
