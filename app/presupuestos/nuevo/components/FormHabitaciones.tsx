@@ -251,11 +251,15 @@ function FormHabitacionDetalle({
           <Label htmlFor="metros-hab">Metros cuadrados *</Label>
           <Input
             id="metros-hab"
-            type="number"
-            step="0.1"
+            type="text"
+            inputMode="decimal"
+            pattern="[0-9]+([.][0-9]+)?"
             value={datos.metrosCuadrados}
             onChange={(e) => {
-              setDatos({ ...datos, metrosCuadrados: e.target.value })
+              const value = e.target.value.replace(',', '.')
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                setDatos({ ...datos, metrosCuadrados: value })
+              }
             }}
             placeholder="25"
             required
@@ -276,10 +280,16 @@ function FormHabitacionDetalle({
           <Label htmlFor="altura-hab">Altura de techos (metros) *</Label>
           <Input
             id="altura-hab"
-            type="number"
-            step="0.1"
+            type="text"
+            inputMode="decimal"
+            pattern="[0-9]+([.][0-9]+)?"
             value={datos.alturaTechos}
-            onChange={(e) => setDatos({ ...datos, alturaTechos: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value.replace(',', '.')
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                setDatos({ ...datos, alturaTechos: value })
+              }
+            }}
             placeholder="2.70"
             required
           />
@@ -299,12 +309,16 @@ function FormHabitacionDetalle({
             <Label htmlFor="ancho-hab">Ancho (metros)</Label>
             <Input
               id="ancho-hab"
-              type="number"
-              step="0.1"
+              type="text"
+              inputMode="decimal"
+              pattern="[0-9]+([.][0-9]+)?"
               value={datos.ancho || ''}
               onChange={(e) => {
-                setDatos({ ...datos, ancho: e.target.value })
-                calcularDesdeMedidas()
+                const value = e.target.value.replace(',', '.')
+                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  setDatos({ ...datos, ancho: value })
+                  calcularDesdeMedidas()
+                }
               }}
               placeholder="4.5"
             />
@@ -313,12 +327,16 @@ function FormHabitacionDetalle({
             <Label htmlFor="largo-hab">Largo (metros)</Label>
             <Input
               id="largo-hab"
-              type="number"
-              step="0.1"
+              type="text"
+              inputMode="decimal"
+              pattern="[0-9]+([.][0-9]+)?"
               value={datos.largo || ''}
               onChange={(e) => {
-                setDatos({ ...datos, largo: e.target.value })
-                calcularDesdeMedidas()
+                const value = e.target.value.replace(',', '.')
+                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  setDatos({ ...datos, largo: value })
+                  calcularDesdeMedidas()
+                }
               }}
               placeholder="5.5"
             />
@@ -339,10 +357,16 @@ function FormHabitacionDetalle({
         <Label htmlFor="perimetro-hab">O especifica perímetro directamente (metros lineales)</Label>
         <Input
           id="perimetro-hab"
-          type="number"
-          step="0.1"
+          type="text"
+          inputMode="decimal"
+          pattern="[0-9]+([.][0-9]+)?"
           value={datos.perimetro || ''}
-          onChange={(e) => setDatos({ ...datos, perimetro: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value.replace(',', '.')
+            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+              setDatos({ ...datos, perimetro: value })
+            }
+          }}
           placeholder="18"
         />
       </div>
