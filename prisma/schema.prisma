@@ -106,134 +106,134 @@ enum EstadoSeguimiento {
 }
 
 model Cliente {
-  id            String    @id @default(cuid())
-  nombre        String
-  telefono      String?
-  email         String?
-  direccion     String?
-  tipo          String?   // particular, empresa, etc.
-  notas         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  presupuestos  Presupuesto[]
-  obras         Obra[]
-  leads         Lead[]
+  id           String        @id @default(cuid())
+  nombre       String
+  telefono     String?
+  email        String?
+  direccion    String?
+  tipo         String? // particular, empresa, etc.
+  notas        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  presupuestos Presupuesto[]
+  obras        Obra[]
+  leads        Lead[]
 
   @@map("clientes")
 }
 
 model Presupuesto {
-  id              String    @id @default(cuid())
-  clienteId       String
-  cliente         Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  
+  id        String  @id @default(cuid())
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
   // Información del proyecto
   direccionObra   String
   tipoObra        TipoObra
-  descripcionObra String?   // Descripción de la obra
+  descripcionObra String? // Descripción de la obra
   metrosTotales   Float
   numHabitaciones Int
   numBanos        Int
-  alturaTechos    Float     // En metros, necesario para cálculos
+  alturaTechos    Float // En metros, necesario para cálculos
   estadoInmueble  EstadoInmueble
-  
+
   // Datos estructurados para visualización
-  habitaciones    Json?     // Array de habitaciones con medidas (JSON)
-  
+  habitaciones Json? // Array de habitaciones con medidas (JSON)
+
   // Cálculos (realizados por sistema, no IA)
-  subtotal        Float
-  iva             Float     @default(21.0) // Porcentaje fijo
-  total           Float
-  
+  subtotal Float
+  iva      Float @default(21.0) // Porcentaje fijo
+  total    Float
+
   // Explicación generada por IA (solo texto descriptivo)
-  explicacionIA   String?   @db.Text
-  
+  explicacionIA String? @db.Text
+
   // Metadata
-  estado          EstadoPresupuesto @default(BORRADOR)
-  fechaCreacion   DateTime  @default(now())
-  fechaValidez    DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  trabajos        TrabajoPresupuesto[]
-  obra            Obra?
+  estado        EstadoPresupuesto @default(BORRADOR)
+  fechaCreacion DateTime          @default(now())
+  fechaValidez  DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  trabajos TrabajoPresupuesto[]
+  obra     Obra?
 
   @@map("presupuestos")
 }
 
 model TrabajoPresupuesto {
-  id              String    @id @default(cuid())
-  presupuestoId   String
-  presupuesto     Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
-  
-  tipoTrabajo     TipoTrabajo
-  descripcion     String
-  cantidad        Float     // m², unidades, etc.
-  unidad          UnidadMedida
-  precioUnitario  Float
-  precioTotal     Float
-  
+  id            String      @id @default(cuid())
+  presupuestoId String
+  presupuesto   Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  tipoTrabajo    TipoTrabajo
+  descripcion    String
+  cantidad       Float // m², unidades, etc.
+  unidad         UnidadMedida
+  precioUnitario Float
+  precioTotal    Float
+
   // Configuraciones específicas del trabajo
-  calidad         Calidad   @default(ESTANDAR)
-  
+  calidad Calidad @default(ESTANDAR)
+
   // Flags específicos según tipo de trabajo
-  necesitaAlisado Boolean   @default(false)
-  necesitaPicado  Boolean   @default(false)
+  necesitaAlisado     Boolean @default(false)
+  necesitaPicado      Boolean @default(false)
   necesitaImprimacion Boolean @default(true)
-  numManosPintura Int       @default(2)
-  
+  numManosPintura     Int     @default(2)
+
   // Información adicional para cálculos exactos
-  perimetro       Float?    // Para pintura (m lineales)
-  superficiePuertas Float? // m² a restar
-  superficieVentanas Float? // m² a restar
+  perimetro            Float? // Para pintura (m lineales)
+  superficiePuertas    Float? // m² a restar
+  superficieVentanas   Float? // m² a restar
   tieneSoladoExistente Boolean @default(false)
-  
+
   // Explicación generada por IA (solo para este trabajo)
-  explicacionIA   String?   @db.Text
-  
-  createdAt       DateTime  @default(now())
-  
-  componentes     ComponenteTrabajo[]
+  explicacionIA String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  componentes ComponenteTrabajo[]
 
   @@map("trabajos_presupuesto")
 }
 
 model ComponenteTrabajo {
-  id              String    @id @default(cuid())
-  trabajoId       String
-  trabajo         TrabajoPresupuesto @relation(fields: [trabajoId], references: [id], onDelete: Cascade)
-  
-  nombre          String    // Ej: "Picado de solado", "Autonivelado"
-  descripcion     String?
-  cantidad        Float
-  unidad          String
-  precioUnitario  Float
-  precioTotal     Float
-  
-  orden           Int       // Para ordenar en el desglose
-  
-  createdAt       DateTime  @default(now())
+  id        String             @id @default(cuid())
+  trabajoId String
+  trabajo   TrabajoPresupuesto @relation(fields: [trabajoId], references: [id], onDelete: Cascade)
+
+  nombre         String // Ej: "Picado de solado", "Autonivelado"
+  descripcion    String?
+  cantidad       Float
+  unidad         String
+  precioUnitario Float
+  precioTotal    Float
+
+  orden Int // Para ordenar en el desglose
+
+  createdAt DateTime @default(now())
 
   @@map("componentes_trabajo")
 }
 
 model PlantillaTrabajo {
-  id                String    @id @default(cuid())
-  tipo              TipoTrabajo
-  nombre            String
-  
+  id     String      @id @default(cuid())
+  tipo   TipoTrabajo
+  nombre String
+
   // Trabajos relacionados que se activan automáticamente
-  trabajosRelacionados Json   // Array de componentes que se añaden automáticamente
-  
+  trabajosRelacionados Json // Array de componentes que se añaden automáticamente
+
   // Precios base por calidad
-  preciosBase       Json      // { basica: {...}, estandar: {...}, premium: {...} }
-  
+  preciosBase Json // { basica: {...}, estandar: {...}, premium: {...} }
+
   // Reglas de cálculo
-  multiplicadores   Json?     // Para ajustes según condiciones
-  
-  activo            Boolean   @default(true)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  multiplicadores Json? // Para ajustes según condiciones
+
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("plantillas_trabajo")
 }
@@ -241,38 +241,38 @@ model PlantillaTrabajo {
 // ========== MÓDULO CRM ==========
 
 model Lead {
-  id            String    @id @default(cuid())
+  id            String     @id @default(cuid())
   nombre        String
   telefono      String?
   email         String?
   direccion     String?
-  origen        String?   // web, referencia, publicidad, etc.
+  origen        String? // web, referencia, publicidad, etc.
   estado        EstadoLead @default(NUEVO)
-  notas         String?   @db.Text
-  valorEstimado Float?    // Valor estimado del presupuesto
-  clienteId     String?   // Si se convierte en cliente
+  notas         String?    @db.Text
+  valorEstimado Float? // Valor estimado del presupuesto
+  clienteId     String? // Si se convierte en cliente
   cliente       Cliente?   @relation(fields: [clienteId], references: [id], onDelete: SetNull)
   campanaId     String?
-  campana       Campana?  @relation(fields: [campanaId], references: [id], onDelete: SetNull)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  campana       Campana?   @relation(fields: [campanaId], references: [id], onDelete: SetNull)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
   @@map("leads")
 }
 
 model Campana {
-  id            String    @id @default(cuid())
-  nombre        String
-  descripcion   String?   @db.Text
-  tipo          String?   // web, social, email, etc.
-  fechaInicio   DateTime?
-  fechaFin      DateTime?
-  presupuesto   Float?
-  gastoReal     Float?    @default(0)
-  activa        Boolean   @default(true)
-  leads         Lead[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  nombre      String
+  descripcion String?   @db.Text
+  tipo        String? // web, social, email, etc.
+  fechaInicio DateTime?
+  fechaFin    DateTime?
+  presupuesto Float?
+  gastoReal   Float?    @default(0)
+  activa      Boolean   @default(true)
+  leads       Lead[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@map("campanas")
 }
@@ -280,51 +280,52 @@ model Campana {
 // ========== MÓDULO PLANIFICACIÓN ==========
 
 model Obra {
-  id              String    @id @default(cuid())
-  presupuestoId   String?   @unique
-  presupuesto     Presupuesto? @relation(fields: [presupuestoId], references: [id], onDelete: SetNull)
-  clienteId       String
-  cliente         Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  nombre          String
-  direccion       String
-  descripcion     String?   @db.Text
-  estado          EstadoObra @default(PLANIFICADA)
-  fechaInicio     DateTime?
-  fechaFinPrevista DateTime?
-  fechaFinReal    DateTime?
-  presupuestoTotal Float    // Presupuesto inicial
-  costeReal       Float?    @default(0)
-  avance          Float?    @default(0) // Porcentaje 0-100
-  tareas          Tarea[]
-  seguimientoCostes SeguimientoCoste[]
-  pagos           Pago[]
-  contratos       ContratoSubcontrata[]
+  id                   String                @id @default(cuid())
+  presupuestoId        String?               @unique
+  presupuesto          Presupuesto?          @relation(fields: [presupuestoId], references: [id], onDelete: SetNull)
+  clienteId            String
+  cliente              Cliente               @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  nombre               String
+  direccion            String
+  descripcion          String?               @db.Text
+  estado               EstadoObra            @default(PLANIFICADA)
+  fechaInicio          DateTime?
+  fechaFinPrevista     DateTime?
+  fechaFinReal         DateTime?
+  presupuestoTotal     Float // Presupuesto inicial
+  costeReal            Float?                @default(0)
+  avance               Float?                @default(0) // Porcentaje 0-100
+  tareas               Tarea[]
+  seguimientoCostes    SeguimientoCoste[]
+  pagos                Pago[]
+  contratos            ContratoSubcontrata[]
   facturasTrabajadores FacturaTrabajador[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  ordenesCompra        OrdenCompra[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
 
   @@map("obras")
 }
 
 model Tarea {
-  id              String    @id @default(cuid())
-  obraId          String
-  obra            Obra      @relation(fields: [obraId], references: [id], onDelete: Cascade)
-  nombre          String
-  descripcion     String?   @db.Text
-  tipo            String?   // materiales, mano_obra, subcontrata, etc.
-  estado          EstadoTarea @default(PENDIENTE)
-  prioridad       Int?      @default(3) // 1=alta, 2=media, 3=baja
-  fechaInicio     DateTime?
+  id               String      @id @default(cuid())
+  obraId           String
+  obra             Obra        @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  nombre           String
+  descripcion      String?     @db.Text
+  tipo             String? // materiales, mano_obra, subcontrata, etc.
+  estado           EstadoTarea @default(PENDIENTE)
+  prioridad        Int?        @default(3) // 1=alta, 2=media, 3=baja
+  fechaInicio      DateTime?
   fechaFinPrevista DateTime?
-  fechaFinReal    DateTime?
-  responsable     String?   // Nombre del responsable
-  horasEstimadas  Float?
-  horasReales     Float?
-  costeEstimado   Float?
-  costeReal       Float?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  fechaFinReal     DateTime?
+  responsable      String? // Nombre del responsable
+  horasEstimadas   Float?
+  horasReales      Float?
+  costeEstimado    Float?
+  costeReal        Float?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   @@map("tareas")
 }
@@ -332,58 +333,58 @@ model Tarea {
 // ========== MÓDULO COMPRAS ==========
 
 model Proveedor {
-  id              String    @id @default(cuid())
-  nombre          String
-  contacto        String?   // Nombre de contacto
-  telefono        String?
-  email           String?
-  direccion       String?
-  tipo            String?   // materiales, herramientas, etc.
-  notas           String?   @db.Text
-  activo          Boolean   @default(true)
-  ordenes         OrdenCompra[]
-  contratos       ContratoSubcontrata[]
-  pagos           Pago[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id        String                @id @default(cuid())
+  nombre    String
+  contacto  String? // Nombre de contacto
+  telefono  String?
+  email     String?
+  direccion String?
+  tipo      String? // materiales, herramientas, etc.
+  notas     String?               @db.Text
+  activo    Boolean               @default(true)
+  ordenes   OrdenCompra[]
+  contratos ContratoSubcontrata[]
+  pagos     Pago[]
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
 
   @@map("proveedores")
 }
 
 model OrdenCompra {
-  id              String    @id @default(cuid())
-  proveedorId     String
-  proveedor       Proveedor @relation(fields: [proveedorId], references: [id], onDelete: Cascade)
-  obraId          String?
-  obra            Obra?     @relation(fields: [obraId], references: [id], onDelete: SetNull)
-  numero          String    @unique // Número de orden
-  descripcion     String?   @db.Text
-  estado          EstadoOrdenCompra @default(BORRADOR)
-  fechaEmision    DateTime  @default(now())
+  id                   String            @id @default(cuid())
+  proveedorId          String
+  proveedor            Proveedor         @relation(fields: [proveedorId], references: [id], onDelete: Cascade)
+  obraId               String?
+  obra                 Obra?             @relation(fields: [obraId], references: [id], onDelete: SetNull)
+  numero               String            @unique // Número de orden
+  descripcion          String?           @db.Text
+  estado               EstadoOrdenCompra @default(BORRADOR)
+  fechaEmision         DateTime          @default(now())
   fechaEntregaPrevista DateTime?
-  fechaEntregaReal DateTime?
-  subtotal        Float     @default(0)
-  iva             Float     @default(21.0)
-  total           Float     @default(0)
-  items           ItemOrdenCompra[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  fechaEntregaReal     DateTime?
+  subtotal             Float             @default(0)
+  iva                  Float             @default(21.0)
+  total                Float             @default(0)
+  items                ItemOrdenCompra[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
   @@map("ordenes_compra")
 }
 
 model ItemOrdenCompra {
-  id              String    @id @default(cuid())
-  ordenCompraId   String
-  ordenCompra     OrdenCompra @relation(fields: [ordenCompraId], references: [id], onDelete: Cascade)
-  descripcion     String
-  cantidad        Float
-  unidad          String    // m², unidades, kg, etc.
-  precioUnitario  Float
-  precioTotal     Float
-  recibido        Boolean   @default(false)
-  cantidadRecibida Float?   @default(0)
-  createdAt       DateTime  @default(now())
+  id               String      @id @default(cuid())
+  ordenCompraId    String
+  ordenCompra      OrdenCompra @relation(fields: [ordenCompraId], references: [id], onDelete: Cascade)
+  descripcion      String
+  cantidad         Float
+  unidad           String // m², unidades, kg, etc.
+  precioUnitario   Float
+  precioTotal      Float
+  recibido         Boolean     @default(false)
+  cantidadRecibida Float?      @default(0)
+  createdAt        DateTime    @default(now())
 
   @@map("items_orden_compra")
 }
@@ -391,24 +392,24 @@ model ItemOrdenCompra {
 // ========== MÓDULO SUBCONTRATAS ==========
 
 model ContratoSubcontrata {
-  id              String    @id @default(cuid())
-  proveedorId     String
-  proveedor       Proveedor @relation(fields: [proveedorId], references: [id], onDelete: Cascade)
-  obraId          String
-  obra            Obra      @relation(fields: [obraId], references: [id], onDelete: Cascade)
-  nombre          String
-  descripcion     String?   @db.Text
-  tipoTrabajo     String?   // fontanería, electricidad, etc.
-  estado          EstadoContrato @default(BORRADOR)
-  fechaInicio     DateTime?
+  id               String         @id @default(cuid())
+  proveedorId      String
+  proveedor        Proveedor      @relation(fields: [proveedorId], references: [id], onDelete: Cascade)
+  obraId           String
+  obra             Obra           @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  nombre           String
+  descripcion      String?        @db.Text
+  tipoTrabajo      String? // fontanería, electricidad, etc.
+  estado           EstadoContrato @default(BORRADOR)
+  fechaInicio      DateTime?
   fechaFinPrevista DateTime?
-  fechaFinReal    DateTime?
-  importeTotal    Float
-  importePagado   Float?    @default(0)
-  porcentajeAvance Float?   @default(0)
-  notas           String?   @db.Text
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  fechaFinReal     DateTime?
+  importeTotal     Float
+  importePagado    Float?         @default(0)
+  porcentajeAvance Float?         @default(0)
+  notas            String?        @db.Text
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   @@map("contratos_subcontrata")
 }
@@ -416,37 +417,37 @@ model ContratoSubcontrata {
 // ========== MÓDULO CONTROL DE COSTES ==========
 
 model SeguimientoCoste {
-  id              String    @id @default(cuid())
-  obraId          String
-  obra            Obra      @relation(fields: [obraId], references: [id], onDelete: Cascade)
-  concepto        String    // Descripción del coste
-  tipo            TipoPago
-  presupuestado   Float     // Coste presupuestado
-  real            Float?     @default(0) // Coste real
-  diferencia      Float?    // Diferencia (real - presupuestado)
-  porcentaje      Float?    // Porcentaje del total
-  fecha           DateTime  @default(now())
-  notas           String?   @db.Text
-  estado          EstadoSeguimiento @default(EN_PLAZO)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id            String            @id @default(cuid())
+  obraId        String
+  obra          Obra              @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  concepto      String // Descripción del coste
+  tipo          TipoPago
+  presupuestado Float // Coste presupuestado
+  real          Float?            @default(0) // Coste real
+  diferencia    Float? // Diferencia (real - presupuestado)
+  porcentaje    Float? // Porcentaje del total
+  fecha         DateTime          @default(now())
+  notas         String?           @db.Text
+  estado        EstadoSeguimiento @default(EN_PLAZO)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
   @@map("seguimiento_costes")
 }
 
 model Pago {
-  id              String    @id @default(cuid())
-  obraId          String
-  obra            Obra      @relation(fields: [obraId], references: [id], onDelete: Cascade)
-  concepto        String
-  tipo            TipoPago
-  importe         Float
-  fecha           DateTime  @default(now())
-  metodo          String?   // transferencia, efectivo, etc.
-  proveedorId     String?
-  proveedor       Proveedor? @relation(fields: [proveedorId], references: [id], onDelete: SetNull)
-  notas           String?   @db.Text
-  createdAt       DateTime  @default(now())
+  id          String     @id @default(cuid())
+  obraId      String
+  obra        Obra       @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  concepto    String
+  tipo        TipoPago
+  importe     Float
+  fecha       DateTime   @default(now())
+  metodo      String? // transferencia, efectivo, etc.
+  proveedorId String?
+  proveedor   Proveedor? @relation(fields: [proveedorId], references: [id], onDelete: SetNull)
+  notas       String?    @db.Text
+  createdAt   DateTime   @default(now())
 
   @@map("pagos")
 }
@@ -461,31 +462,31 @@ enum EstadoFacturaTrabajador {
 }
 
 model FacturaTrabajador {
-  id              String    @id @default(cuid())
-  trabajadorNombre String
-  trabajadorDni   String?
+  id                 String                  @id @default(cuid())
+  trabajadorNombre   String
+  trabajadorDni      String?
   trabajadorTelefono String?
-  concepto        String
-  importe         Float
-  fechaFactura    DateTime
-  fechaRegistro   DateTime  @default(now())
-  estado          EstadoFacturaTrabajador @default(PENDIENTE)
-  
+  concepto           String
+  importe            Float
+  fechaFactura       DateTime
+  fechaRegistro      DateTime                @default(now())
+  estado             EstadoFacturaTrabajador @default(PENDIENTE)
+
   // Datos de la factura escaneada
-  imagenUrl       String?   // URL de la imagen de la factura
-  imagenBase64    String?   @db.Text // Base64 para almacenamiento simple
-  datosExtraidos  Json?     // Datos extraídos por OCR (opcional)
-  
+  imagenUrl      String? // URL de la imagen de la factura
+  imagenBase64   String? @db.Text // Base64 para almacenamiento simple
+  datosExtraidos Json? // Datos extraídos por OCR (opcional)
+
   // Relaciones
-  obraId          String?
-  obra            Obra?     @relation(fields: [obraId], references: [id], onDelete: SetNull)
-  
+  obraId String?
+  obra   Obra?   @relation(fields: [obraId], references: [id], onDelete: SetNull)
+
   // Metadatos
-  notas           String?   @db.Text
-  enviadoGestor   Boolean   @default(false)
+  notas            String?   @db.Text
+  enviadoGestor    Boolean   @default(false)
   fechaEnvioGestor DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@map("facturas_trabajadores")
 }
