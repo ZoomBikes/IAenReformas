@@ -166,25 +166,43 @@ export default function FacturasTrabajadoresPage() {
       
       const method = editingItem ? 'PUT' : 'POST'
 
+      // Validar campos requeridos
+      if (!formData.trabajadorNombre || !formData.concepto || !formData.importe || !formData.fechaFactura) {
+        toast.error('Por favor completa todos los campos obligatorios')
+        return
+      }
+
+      const payload = {
+        trabajadorNombre: formData.trabajadorNombre,
+        concepto: formData.concepto,
+        importe: formData.importe,
+        fechaFactura: formData.fechaFactura,
+        notas: formData.notas || null,
+        imagenBase64: previewImage || null,
+        estado: 'PENDIENTE'
+      }
+
       const res = await fetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          imagenBase64: previewImage,
-          estado: 'PENDIENTE' // Siempre pendiente por defecto
-        })
+        body: JSON.stringify(payload)
       })
 
-      if (!res.ok) throw new Error('Error al guardar')
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }))
+        console.error('Error del servidor:', errorData)
+        toast.error(errorData.error || 'Error al guardar la factura')
+        return
+      }
 
-      toast.success(editingItem ? 'Actualizada' : 'Creada')
+      toast.success(editingItem ? 'Factura actualizada' : 'Factura creada correctamente')
       setShowModal(false)
       setPreviewImage(null)
       setEditingItem(null)
       cargarFacturas()
-    } catch (error) {
-      toast.error('Error al guardar')
+    } catch (error: any) {
+      console.error('Error al guardar factura:', error)
+      toast.error(error.message || 'Error al guardar la factura')
     }
   }
 

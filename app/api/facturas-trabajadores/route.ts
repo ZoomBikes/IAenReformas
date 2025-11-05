@@ -52,36 +52,51 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       trabajadorNombre,
-      trabajadorDni,
-      trabajadorTelefono,
       concepto,
       importe,
       fechaFactura,
       imagenBase64,
-      imagenUrl,
-      obraId,
       notas,
-      datosExtraidos
+      estado
     } = body
 
+    // Validar campos requeridos
     if (!trabajadorNombre || !concepto || !importe || !fechaFactura) {
-      return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
+      return NextResponse.json({ 
+        error: 'Datos incompletos. Se requieren: trabajadorNombre, concepto, importe y fechaFactura' 
+      }, { status: 400 })
+    }
+
+    // Validar que importe sea un número válido
+    const importeNum = parseFloat(importe)
+    if (isNaN(importeNum) || importeNum <= 0) {
+      return NextResponse.json({ 
+        error: 'El importe debe ser un número mayor que 0' 
+      }, { status: 400 })
+    }
+
+    // Validar fecha
+    const fecha = new Date(fechaFactura)
+    if (isNaN(fecha.getTime())) {
+      return NextResponse.json({ 
+        error: 'La fecha de factura no es válida' 
+      }, { status: 400 })
     }
 
     const factura = await prisma.facturaTrabajador.create({
       data: {
-        trabajadorNombre,
-        trabajadorDni: trabajadorDni || null,
-        trabajadorTelefono: trabajadorTelefono || null,
-        concepto,
-        importe: parseFloat(importe),
-        fechaFactura: new Date(fechaFactura),
+        trabajadorNombre: trabajadorNombre.trim(),
+        trabajadorDni: null,
+        trabajadorTelefono: null,
+        concepto: concepto.trim(),
+        importe: importeNum,
+        fechaFactura: fecha,
         imagenBase64: imagenBase64 || null,
-        imagenUrl: imagenUrl || null,
-        obraId: obraId || null,
-        notas: notas || null,
-        datosExtraidos: datosExtraidos || null,
-        estado: 'PENDIENTE',
+        imagenUrl: null,
+        obraId: null,
+        notas: notas?.trim() || null,
+        datosExtraidos: null,
+        estado: estado || 'PENDIENTE',
         enviadoGestor: false
       },
       include: {
@@ -94,9 +109,14 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ factura }, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creando factura:', error)
-    return NextResponse.json({ error: 'Error al crear factura' }, { status: 500 })
+    // Mejorar mensaje de error
+    const errorMessage = error.message || 'Error al crear factura'
+    return NextResponse.json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: 500 })
   }
 }
 
