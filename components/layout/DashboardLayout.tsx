@@ -28,7 +28,8 @@ import {
   Target,
   CheckCircle2,
   Plus,
-  Search
+  Search,
+  Receipt
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -59,6 +60,7 @@ const navigation: NavSection[] = [
       { name: 'Planificación', href: '/planificacion', icon: Calendar },
       { name: 'Compras', href: '/compras', icon: ShoppingCart },
       { name: 'Control Costes', href: '/costes', icon: DollarSign },
+      { name: 'Facturas Trabajadores', href: '/facturas-trabajadores', icon: Receipt },
     ]
   }
 ]
