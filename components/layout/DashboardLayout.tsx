@@ -58,8 +58,13 @@ const navigation: NavSection[] = [
     items: [
       { name: 'CRM', href: '/crm', icon: Users },
       { name: 'Planificación', href: '/planificacion', icon: Calendar },
-      { name: 'Compras', href: '/compras', icon: ShoppingCart },
-      { name: 'Control Costes', href: '/costes', icon: DollarSign },
+    ]
+  },
+  {
+    title: 'Finanzas y Costes',
+    items: [
+      { name: 'Control de Costes', href: '/costes', icon: DollarSign },
+      { name: 'Compras y Subcontratas', href: '/compras', icon: ShoppingCart },
       { name: 'Facturas Trabajadores', href: '/facturas-trabajadores', icon: Receipt },
     ]
   }
