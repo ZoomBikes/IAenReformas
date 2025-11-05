@@ -62,11 +62,11 @@ export async function GET(request: NextRequest) {
         }
       })
 
-      const presupuestado = obras.reduce((sum, o) => sum + (o.presupuestoTotal || 0), 0)
-      const ejecutado = obras.reduce((sum, o) => sum + (o.costeReal || 0), 0)
+      const presupuestado = obras.reduce((sum: number, o: any) => sum + (o.presupuestoTotal || 0), 0)
+      const ejecutado = obras.reduce((sum: number, o: any) => sum + (o.costeReal || 0), 0)
       const margen = presupuestado > 0 ? ((presupuestado - ejecutado) / presupuestado) * 100 : 0
       const avance = obras.length > 0 
-        ? obras.reduce((sum, o) => sum + (o.avance || 0), 0) / obras.length 
+        ? obras.reduce((sum: number, o: any) => sum + (o.avance || 0), 0) / obras.length 
         : 0
 
       return NextResponse.json({
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
         ejecutado,
         margen,
         avance,
-        obras: obras.map(o => ({
+        obras: obras.map((o: any) => ({
           id: o.id,
           nombre: o.nombre,
           cliente: o.cliente.nombre,

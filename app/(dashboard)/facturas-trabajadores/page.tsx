@@ -414,6 +414,10 @@ export default function FacturasTrabajadoresPage() {
             onStartCamera={startCamera}
             onCapturePhoto={capturePhoto}
             onStopCamera={stopCamera}
+            onRemoveImage={() => {
+              setPreviewImage(null)
+              if (fileInputRef.current) fileInputRef.current.value = ''
+            }}
             showCamera={showCamera}
             videoRef={videoRef}
             fileInputRef={fileInputRef}
@@ -433,6 +437,7 @@ function ModalFactura({
   onStartCamera,
   onCapturePhoto,
   onStopCamera,
+  onRemoveImage,
   showCamera,
   videoRef,
   fileInputRef
@@ -515,10 +520,7 @@ function ModalFactura({
                       variant="ghost"
                       size="sm"
                       className="absolute top-2 right-2 bg-white/90"
-                      onClick={() => {
-                        setPreviewImage(null)
-                        if (fileInputRef.current) fileInputRef.current.value = ''
-                      }}
+                      onClick={onRemoveImage}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -527,10 +529,7 @@ function ModalFactura({
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => {
-                        setPreviewImage(null)
-                        if (fileInputRef.current) fileInputRef.current.value = ''
-                      }}
+                      onClick={onRemoveImage}
                       className="flex-1"
                     >
                       Cambiar Imagen
