@@ -171,7 +171,8 @@ export default function FacturasTrabajadoresPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          imagenBase64: previewImage
+          imagenBase64: previewImage,
+          estado: 'PENDIENTE' // Siempre pendiente por defecto
         })
       })
 
@@ -189,8 +190,7 @@ export default function FacturasTrabajadoresPage() {
 
   const facturasFiltradas = facturas.filter(f =>
     f.trabajadorNombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    f.concepto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    f.trabajadorDni?.includes(searchTerm)
+    f.concepto.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const stats = {
@@ -293,7 +293,7 @@ export default function FacturasTrabajadoresPage() {
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <Input
-                  placeholder="Buscar por trabajador, concepto o DNI..."
+                  placeholder="Buscar por trabajador o concepto..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 rounded-xl border-orange-200/50"
@@ -342,13 +342,7 @@ export default function FacturasTrabajadoresPage() {
                         <p className="text-sm text-slate-600 mb-2">{factura.concepto}</p>
                         <div className="flex flex-wrap gap-4 text-sm text-slate-600">
                           <span className="font-semibold text-slate-900">€{factura.importe.toFixed(2)}</span>
-                          {factura.trabajadorDni && <span>DNI: {factura.trabajadorDni}</span>}
                           <span>Fecha: {new Date(factura.fechaFactura).toLocaleDateString('es-ES')}</span>
-                          {factura.obra && (
-                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                              {factura.obra.nombre}
-                            </span>
-                          )}
                         </div>
                         {(factura.imagenBase64 || factura.imagenUrl) && (
                           <div className="mt-2">
@@ -444,14 +438,10 @@ function ModalFactura({
 }: any) {
   const [formData, setFormData] = useState({
     trabajadorNombre: item?.trabajadorNombre || '',
-    trabajadorDni: item?.trabajadorDni || '',
-    trabajadorTelefono: item?.trabajadorTelefono || '',
     concepto: item?.concepto || '',
     importe: item?.importe || '',
     fechaFactura: item?.fechaFactura ? new Date(item.fechaFactura).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-    obraId: item?.obraId || '',
-    notas: item?.notas || '',
-    estado: item?.estado || 'PENDIENTE'
+    notas: item?.notas || ''
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -579,32 +569,13 @@ function ModalFactura({
             </div>
 
             {/* Datos del Trabajador */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-slate-700">Nombre del Trabajador *</label>
-                <Input
-                  value={formData.trabajadorNombre}
-                  onChange={(e) => setFormData({ ...formData, trabajadorNombre: e.target.value })}
-                  className="mt-1 rounded-xl"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700">DNI</label>
-                <Input
-                  value={formData.trabajadorDni}
-                  onChange={(e) => setFormData({ ...formData, trabajadorDni: e.target.value })}
-                  className="mt-1 rounded-xl"
-                />
-              </div>
-            </div>
-
             <div>
-              <label className="text-sm font-medium text-slate-700">Teléfono</label>
+              <label className="text-sm font-medium text-slate-700">Nombre del Trabajador *</label>
               <Input
-                value={formData.trabajadorTelefono}
-                onChange={(e) => setFormData({ ...formData, trabajadorTelefono: e.target.value })}
+                value={formData.trabajadorNombre}
+                onChange={(e) => setFormData({ ...formData, trabajadorNombre: e.target.value })}
                 className="mt-1 rounded-xl"
+                required
               />
             </div>
 
@@ -632,39 +603,14 @@ function ModalFactura({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-slate-700">Fecha de Factura *</label>
-                <Input
-                  type="date"
-                  value={formData.fechaFactura}
-                  onChange={(e) => setFormData({ ...formData, fechaFactura: e.target.value })}
-                  className="mt-1 rounded-xl"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700">Estado</label>
-                <select
-                  value={formData.estado}
-                  onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-orange-200/50 p-2"
-                >
-                  <option value="PENDIENTE">Pendiente</option>
-                  <option value="ENVIADA">Enviada</option>
-                  <option value="PAGADA">Pagada</option>
-                  <option value="RECHAZADA">Rechazada</option>
-                </select>
-              </div>
-            </div>
-
             <div>
-              <label className="text-sm font-medium text-slate-700">Obra ID (opcional)</label>
+              <label className="text-sm font-medium text-slate-700">Fecha de Factura *</label>
               <Input
-                value={formData.obraId}
-                onChange={(e) => setFormData({ ...formData, obraId: e.target.value })}
+                type="date"
+                value={formData.fechaFactura}
+                onChange={(e) => setFormData({ ...formData, fechaFactura: e.target.value })}
                 className="mt-1 rounded-xl"
-                placeholder="ID de la obra relacionada"
+                required
               />
             </div>
 
