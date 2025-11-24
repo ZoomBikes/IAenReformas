@@ -1,18 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-let prisma: any = null
-try {
-  const { prisma: prismaClient } = require('@/lib/prisma')
-  prisma = prismaClient
-} catch (error) {
-  console.warn('Prisma no está configurado aún')
-}
+import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
-  if (!prisma) {
-    return NextResponse.json({ llamadas: [] }, { status: 200 })
-  }
-
   try {
     const { searchParams } = new URL(request.url)
     const estado = searchParams.get('estado')
@@ -127,13 +117,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!prisma) {
-    return NextResponse.json({ error: 'Base de datos no configurada' }, { status: 503 })
-  }
-
   try {
     const body = await request.json()
-    const { nombre, telefono, email, empresa, direccion, notas, origen } = body
+    const { nombre, telefono, email, agencia, direccion, codigoPostal, profileUrl, notas, origen } = body
 
     if (!nombre || !telefono) {
       return NextResponse.json({ 
@@ -146,11 +132,14 @@ export async function POST(request: NextRequest) {
         nombre: nombre.trim(),
         telefono: telefono.trim(),
         email: email?.trim() || null,
-        empresa: empresa?.trim() || null,
+        agencia: agencia?.trim() || null,
         direccion: direccion?.trim() || null,
+        codigoPostal: codigoPostal?.trim() || null,
+        profileUrl: profileUrl?.trim() || null,
         notas: notas?.trim() || null,
         origen: origen || 'manual',
-        estado: 'PENDIENTE'
+        estado: 'PENDIENTE',
+        haLlamado: false
       }
     })
 

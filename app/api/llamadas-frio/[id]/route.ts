@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-let prisma: any = null
-try {
-  const { prisma: prismaClient } = require('@/lib/prisma')
-  prisma = prismaClient
-} catch (error) {
-  console.warn('Prisma no está configurado aún')
-}
+import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  if (!prisma) {
-    return NextResponse.json({ error: 'Base de datos no configurada' }, { status: 503 })
-  }
-
   try {
     const llamada = await prisma.llamadaFrio.findUnique({
       where: { id: params.id },
@@ -40,10 +29,6 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  if (!prisma) {
-    return NextResponse.json({ error: 'Base de datos no configurada' }, { status: 503 })
-  }
-
   try {
     const body = await request.json()
     const {
@@ -131,10 +116,6 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  if (!prisma) {
-    return NextResponse.json({ error: 'Base de datos no configurada' }, { status: 503 })
-  }
-
   try {
     await prisma.llamadaFrio.delete({
       where: { id: params.id }

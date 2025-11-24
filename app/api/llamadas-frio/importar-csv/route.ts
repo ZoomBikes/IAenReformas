@@ -1,18 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-let prisma: any = null
-try {
-  const { prisma: prismaClient } = require('@/lib/prisma')
-  prisma = prismaClient
-} catch (error) {
-  console.warn('Prisma no está configurado aún')
-}
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
-  if (!prisma) {
-    return NextResponse.json({ error: 'Base de datos no configurada' }, { status: 503 })
-  }
-
   try {
     const body = await request.json()
     const { csvData, origen } = body
