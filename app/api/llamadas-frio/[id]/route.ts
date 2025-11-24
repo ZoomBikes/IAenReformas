@@ -50,37 +50,68 @@ export async function PUT(
       nombre,
       telefono,
       email,
-      empresa,
+      agencia,
       direccion,
+      codigoPostal,
+      profileUrl,
       notas,
       estado,
+      haLlamado,
       fechaLlamada,
       fechaAgendada,
       duracion,
       resultado,
+      resultadoDetalle,
       interesado,
       valorEstimado,
-      siguienteAccion
+      siguienteAccion,
+      registrarLlamada // Flag para registrar nueva llamada en historial
     } = body
+
+    // Obtener llamada actual para mantener historial
+    const llamadaActual = await prisma.llamadaFrio.findUnique({
+      where: { id: params.id }
+    })
+
+    // Si se registra una nueva llamada, añadir al historial oculto
+    let historialLlamadas = llamadaActual?.historialLlamadas as any[] || []
+    if (registrarLlamada && haLlamado) {
+      const ahora = new Date()
+      historialLlamadas.push({
+        fecha: ahora.toISOString().split('T')[0],
+        hora: ahora.toTimeString().split(' ')[0].substring(0, 5), // HH:MM
+        timestamp: ahora.toISOString(),
+        duracion: duracion || 0,
+        resultado: resultado || 'NO_CONTESTA',
+        estado: estado || 'LLAMADA_REALIZADA'
+      })
+    }
+
+    const updateData: any = {
+      ...(nombre && { nombre: nombre.trim() }),
+      ...(telefono && { telefono: telefono.trim() }),
+      ...(email !== undefined && { email: email?.trim() || null }),
+      ...(agencia !== undefined && { agencia: agencia?.trim() || null }),
+      ...(direccion !== undefined && { direccion: direccion?.trim() || null }),
+      ...(codigoPostal !== undefined && { codigoPostal: codigoPostal?.trim() || null }),
+      ...(profileUrl !== undefined && { profileUrl: profileUrl?.trim() || null }),
+      ...(notas !== undefined && { notas: notas?.trim() || null }),
+      ...(estado && { estado }),
+      ...(haLlamado !== undefined && { haLlamado }),
+      ...(fechaLlamada && { fechaLlamada: new Date(fechaLlamada) }),
+      ...(fechaAgendada && { fechaAgendada: new Date(fechaAgendada) }),
+      ...(duracion !== undefined && { duracion }),
+      ...(resultado !== undefined && { resultado }),
+      ...(resultadoDetalle !== undefined && { resultadoDetalle: resultadoDetalle?.trim() || null }),
+      ...(interesado !== undefined && { interesado }),
+      ...(valorEstimado !== undefined && { valorEstimado }),
+      ...(siguienteAccion !== undefined && { siguienteAccion: siguienteAccion?.trim() || null }),
+      ...(historialLlamadas.length > 0 && { historialLlamadas })
+    }
 
     const llamada = await prisma.llamadaFrio.update({
       where: { id: params.id },
-      data: {
-        ...(nombre && { nombre: nombre.trim() }),
-        ...(telefono && { telefono: telefono.trim() }),
-        ...(email !== undefined && { email: email?.trim() || null }),
-        ...(empresa !== undefined && { empresa: empresa?.trim() || null }),
-        ...(direccion !== undefined && { direccion: direccion?.trim() || null }),
-        ...(notas !== undefined && { notas: notas?.trim() || null }),
-        ...(estado && { estado }),
-        ...(fechaLlamada && { fechaLlamada: new Date(fechaLlamada) }),
-        ...(fechaAgendada && { fechaAgendada: new Date(fechaAgendada) }),
-        ...(duracion !== undefined && { duracion }),
-        ...(resultado !== undefined && { resultado: resultado?.trim() || null }),
-        ...(interesado !== undefined && { interesado }),
-        ...(valorEstimado !== undefined && { valorEstimado }),
-        ...(siguienteAccion !== undefined && { siguienteAccion: siguienteAccion?.trim() || null })
-      },
+      data: updateData,
       include: {
         cliente: true,
         lead: true

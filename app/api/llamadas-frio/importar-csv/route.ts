@@ -30,11 +30,29 @@ export async function POST(request: NextRequest) {
       erroresDetalle: [] as string[]
     }
 
+    // Función para extraer código postal de dirección
+    const extraerCodigoPostal = (direccion: string): string | null => {
+      if (!direccion) return null
+      // Buscar patrón de 5 dígitos (código postal español)
+      const match = direccion.match(/\b\d{5}\b/)
+      return match ? match[0] : null
+    }
+
+    // Función para limpiar teléfono
+    const limpiarTelefono = (telefono: string): string => {
+      if (!telefono) return ''
+      // Eliminar espacios, guiones, paréntesis y prefijos
+      return telefono.toString().replace(/[\s\-\(\)\+]/g, '').trim()
+    }
+
     for (const fila of csvData) {
       try {
-        // Validar campos mínimos
-        const nombre = fila.nombre || fila.Nombre || fila.NOMBRE || ''
-        const telefono = fila.telefono || fila.Telefono || fila.TELEFONO || fila.tel || fila.Tel || ''
+        // Mapear columnas del CSV: name, agency, address, profile_url, phone
+        const nombre = fila.name || fila.nombre || fila.Nombre || fila.NOMBRE || ''
+        const telefono = limpiarTelefono(fila.phone || fila.telefono || fila.Telefono || fila.TELEFONO || '')
+        const agencia = fila.agency || fila.agencia || fila.Agencia || fila.AGENCY || ''
+        const direccion = fila.address || fila.adress || fila.direccion || fila.Direccion || fila.ADDRESS || ''
+        const profileUrl = fila.profile_url || fila.profileUrl || fila.profile_url || ''
 
         if (!nombre || !telefono) {
           resultados.errores++
@@ -42,10 +60,13 @@ export async function POST(request: NextRequest) {
           continue
         }
 
+        // Extraer código postal de la dirección
+        const codigoPostal = extraerCodigoPostal(direccion)
+
         // Verificar si ya existe (por teléfono)
         const existe = await prisma.llamadaFrio.findFirst({
           where: {
-            telefono: telefono.toString().trim()
+            telefono: telefono
           }
         })
 
@@ -58,12 +79,14 @@ export async function POST(request: NextRequest) {
         await prisma.llamadaFrio.create({
           data: {
             nombre: nombre.toString().trim(),
-            telefono: telefono.toString().trim(),
-            email: (fila.email || fila.Email || fila.EMAIL || '').toString().trim() || null,
-            empresa: (fila.empresa || fila.Empresa || fila.EMPRESA || '').toString().trim() || null,
-            direccion: (fila.direccion || fila.Direccion || fila.DIRECCION || '').toString().trim() || null,
+            telefono: telefono,
+            agencia: agencia.toString().trim() || null,
+            direccion: direccion.toString().trim() || null,
+            codigoPostal: codigoPostal,
+            profileUrl: profileUrl.toString().trim() || null,
             origen: origen || 'csv',
-            estado: 'PENDIENTE'
+            estado: 'PENDIENTE',
+            haLlamado: false
           }
         })
 

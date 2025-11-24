@@ -497,13 +497,22 @@ model FacturaTrabajador {
 
 enum EstadoLlamada {
   PENDIENTE
-  EN_PROGRESO
-  COMPLETADA
+  LLAMADA_REALIZADA
   NO_CONTESTA
   RECHAZADA
-  INTERESADO
+  REUNION_AGENDADA
+  SOLICITA_INFO
   NO_INTERESADO
-  AGENDADA
+  COMPLETADA
+}
+
+enum ResultadoLlamada {
+  REUNION
+  SOLICITA_INFO
+  NO_INTERES
+  NO_CONTESTA
+  RECHAZADA
+  OTRO
 }
 
 model LlamadaFrio {
@@ -511,21 +520,28 @@ model LlamadaFrio {
   nombre          String        // Nombre del contacto
   telefono        String        // Teléfono de contacto
   email           String?       // Email (opcional)
-  empresa         String?       // Empresa (opcional)
-  direccion       String?       // Dirección (opcional)
+  agencia         String?       // Agencia inmobiliaria
+  direccion       String?       // Dirección completa
+  codigoPostal    String?       // Código postal extraído de dirección
+  profileUrl      String?       // URL del perfil
   notas           String?       @db.Text // Notas adicionales
   
   // Estado y seguimiento
   estado          EstadoLlamada @default(PENDIENTE)
+  haLlamado       Boolean       @default(false) // Si se ha realizado la llamada
   fechaLlamada    DateTime?     // Fecha/hora de la llamada realizada
-  fechaAgendada   DateTime?     // Si se agendó una llamada futura
+  fechaAgendada   DateTime?     // Si se agendó una reunión
   duracion        Int?          // Duración en segundos
   
   // Resultados de la llamada
-  resultado       String?       @db.Text // Resultado de la llamada
+  resultado       ResultadoLlamada? // Resultado de la llamada
+  resultadoDetalle String?       @db.Text // Detalle del resultado
   interesado      Boolean?      // Si mostró interés
   valorEstimado   Float?        // Valor estimado si mostró interés
   siguienteAccion String?       @db.Text // Próxima acción a realizar
+  
+  // Rastreo oculto de llamadas (para análisis)
+  historialLlamadas Json?       // Array de llamadas con timestamps: [{fecha, hora, duracion, resultado}]
   
   // Relación con cliente/lead (si se convierte)
   clienteId       String?
