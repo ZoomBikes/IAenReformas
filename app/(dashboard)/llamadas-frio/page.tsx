@@ -122,6 +122,7 @@ export default function LlamadasFrioPage() {
 
   useEffect(() => {
     cargarLlamadas()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroEstado, filtroCodigoPostal, filtroAgencia, filtroResultado, filtroHaLlamado])
 
   const cargarLlamadas = async () => {

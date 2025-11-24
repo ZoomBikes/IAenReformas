@@ -116,8 +116,8 @@ export async function GET(request: NextRequest) {
           : 0
       },
       filtros: {
-        codigosPostales: codigosPostales.map(cp => cp.codigoPostal).filter(Boolean).sort(),
-        agencias: agencias.map(a => a.agencia).filter(Boolean).sort()
+        codigosPostales: codigosPostales.map((cp: any) => cp.codigoPostal).filter(Boolean).sort(),
+        agencias: agencias.map((a: any) => a.agencia).filter(Boolean).sort()
       }
     })
   } catch (error) {
