@@ -795,8 +795,12 @@ export default function LlamadasFrioPage() {
                   <div className="relative flex-1 min-w-[150px] sm:flex-initial sm:min-w-0">
                     <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                     <select
-                      value={filtroCodigoPostal}
-                      onChange={(e) => setFiltroCodigoPostal(e.target.value)}
+                      key={`cp-${filtroCodigoPostal}`}
+                      value={filtroCodigoPostal || ''}
+                      onChange={(e) => {
+                        const nuevoValor = e.target.value
+                        setFiltroCodigoPostal(nuevoValor)
+                      }}
                       className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-blue-200 bg-white focus:border-blue-400 focus:outline-none"
                     >
                       <option value="">Todas las zonas</option>
@@ -812,8 +816,12 @@ export default function LlamadasFrioPage() {
                   <div className="relative flex-1 min-w-[150px] sm:flex-initial sm:min-w-0">
                     <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                     <select
-                      value={filtroAgencia}
-                      onChange={(e) => setFiltroAgencia(e.target.value)}
+                      key={`ag-${filtroAgencia}`}
+                      value={filtroAgencia || ''}
+                      onChange={(e) => {
+                        const nuevoValor = e.target.value
+                        setFiltroAgencia(nuevoValor)
+                      }}
                       className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-blue-200 bg-white focus:border-blue-400 focus:outline-none"
                     >
                       <option value="">Todas las agencias</option>
@@ -827,8 +835,12 @@ export default function LlamadasFrioPage() {
                   <div className="relative flex-1 min-w-[150px] sm:flex-initial sm:min-w-0">
                     <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                     <select
-                      value={filtroResultado}
-                      onChange={(e) => setFiltroResultado(e.target.value)}
+                      key={`res-${filtroResultado}`}
+                      value={filtroResultado || ''}
+                      onChange={(e) => {
+                        const nuevoValor = e.target.value
+                        setFiltroResultado(nuevoValor)
+                      }}
                       className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-blue-200 bg-white focus:border-blue-400 focus:outline-none"
                     >
                       <option value="">Todos los resultados</option>
@@ -844,8 +856,12 @@ export default function LlamadasFrioPage() {
                   <div className="relative flex-1 min-w-[150px] sm:flex-initial sm:min-w-0">
                     <Activity className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                     <select
-                      value={filtroEstado}
-                      onChange={(e) => setFiltroEstado(e.target.value)}
+                      key={`est-${filtroEstado}`}
+                      value={filtroEstado || ''}
+                      onChange={(e) => {
+                        const nuevoValor = e.target.value
+                        setFiltroEstado(nuevoValor)
+                      }}
                       className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-blue-200 bg-white focus:border-blue-400 focus:outline-none"
                     >
                       <option value="">Todos los estados</option>
@@ -861,8 +877,12 @@ export default function LlamadasFrioPage() {
                   <div className="relative flex-1 min-w-[150px] sm:flex-initial sm:min-w-0">
                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                     <select
-                      value={filtroHaLlamado}
-                      onChange={(e) => setFiltroHaLlamado(e.target.value)}
+                      key={`llam-${filtroHaLlamado}`}
+                      value={filtroHaLlamado || ''}
+                      onChange={(e) => {
+                        const nuevoValor = e.target.value
+                        setFiltroHaLlamado(nuevoValor)
+                      }}
                       className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-blue-200 bg-white focus:border-blue-400 focus:outline-none"
                     >
                       <option value="">Todas</option>
