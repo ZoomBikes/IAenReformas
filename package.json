@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
@@ -13,7 +13,7 @@
     "db:studio": "prisma studio",
     "db:deploy": "prisma migrate deploy",
     "db:setup-nueva": "bash scripts/setup-nueva-bd.sh",
-    "postbuild": "prisma generate && prisma db push --skip-generate"
+    "postbuild": "prisma db push --skip-generate"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
