@@ -12,7 +12,8 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:deploy": "prisma migrate deploy",
-    "db:setup-nueva": "bash scripts/setup-nueva-bd.sh"
+    "db:setup-nueva": "bash scripts/setup-nueva-bd.sh",
+    "postbuild": "prisma generate && prisma db push --skip-generate"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
