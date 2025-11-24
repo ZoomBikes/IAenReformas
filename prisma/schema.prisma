@@ -549,6 +549,9 @@ model LlamadaFrio {
   leadId          String?
   lead            Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
   
+  // Colaborador
+  esColaborador   Boolean       @default(false) // Si ya trabajamos juntos
+  
   // Metadata
   origen          String?       // Origen del CSV o importación
   createdAt       DateTime      @default(now())

@@ -28,7 +28,18 @@ import {
   Zap,
   Info,
   CheckCircle,
-  Ban
+  Ban,
+  Star,
+  BarChart3,
+  Activity,
+  DollarSign,
+  Timer,
+  TrendingDown,
+  Filter,
+  Eye,
+  EyeOff,
+  Handshake,
+  Sparkles
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -43,6 +54,7 @@ interface LlamadaFrio {
   profileUrl?: string
   estado: string
   haLlamado: boolean
+  esColaborador?: boolean
   fechaLlamada?: string
   fechaAgendada?: string
   duracion?: number
@@ -66,9 +78,16 @@ interface Estadisticas {
   solicitaInfo: number
   noInteres: number
   pendientes: number
+  colaboradores: number
+  llamadasHoy: number
+  llamadasSemana: number
+  duracionPromedio: number
+  valorEstimadoTotal: number
   tasaConversion: number
   tasaReunion: number
   llamadasPorReunion: number
+  progresoObjetivo: number
+  objetivo: number
 }
 
 interface Filtros {
@@ -89,9 +108,16 @@ export default function LlamadasFrioPage() {
     solicitaInfo: 0,
     noInteres: 0,
     pendientes: 0,
+    colaboradores: 0,
+    llamadasHoy: 0,
+    llamadasSemana: 0,
+    duracionPromedio: 0,
+    valorEstimadoTotal: 0,
     tasaConversion: 0,
     tasaReunion: 0,
-    llamadasPorReunion: 0
+    llamadasPorReunion: 0,
+    progresoObjetivo: 0,
+    objetivo: 500
   })
   const [filtros, setFiltros] = useState<Filtros>({ codigosPostales: [], agencias: [] })
   const [loading, setLoading] = useState(true)
@@ -124,6 +150,7 @@ export default function LlamadasFrioPage() {
     notas: '',
     estado: 'PENDIENTE',
     haLlamado: false,
+    esColaborador: false,
     fechaLlamada: '',
     fechaAgendada: '',
     duracion: '',
@@ -324,6 +351,7 @@ export default function LlamadasFrioPage() {
       notas: llamada.notas || '',
       estado: 'LLAMADA_REALIZADA',
       haLlamado: true,
+      esColaborador: llamada.esColaborador || false,
       fechaLlamada: fechaHora,
       fechaAgendada: '',
       duracion: '180', // 3 minutos por defecto
@@ -369,8 +397,9 @@ export default function LlamadasFrioPage() {
         body.resultado = formData.resultado || null
         body.resultadoDetalle = formData.resultadoDetalle || null
         body.interesado = formData.interesado
-        if (formData.valorEstimado) body.valorEstimado = parseFloat(formData.valorEstimado)
+        if (formData.valorEstimado)         body.valorEstimado = parseFloat(formData.valorEstimado)
         body.siguienteAccion = formData.siguienteAccion || null
+        body.esColaborador = formData.esColaborador
         body.registrarLlamada = formData.haLlamado && !editingItem.haLlamado
       }
 
@@ -408,6 +437,7 @@ export default function LlamadasFrioPage() {
       notas: llamada.notas || '',
       estado: llamada.estado,
       haLlamado: llamada.haLlamado,
+      esColaborador: llamada.esColaborador || false,
       fechaLlamada: llamada.fechaLlamada ? new Date(llamada.fechaLlamada).toISOString().slice(0, 16) : '',
       fechaAgendada: llamada.fechaAgendada ? new Date(llamada.fechaAgendada).toISOString().slice(0, 16) : '',
       duracion: llamada.duracion?.toString() || '',
@@ -418,6 +448,21 @@ export default function LlamadasFrioPage() {
       siguienteAccion: llamada.siguienteAccion || ''
     })
     setShowModal(true)
+  }
+  
+  const handleToggleColaborador = async (llamada: LlamadaFrio) => {
+    try {
+      const res = await fetch(`/api/llamadas-frio/${llamada.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ esColaborador: !llamada.esColaborador })
+      })
+      if (!res.ok) throw new Error('Error al actualizar')
+      toast.success(llamada.esColaborador ? 'Colaborador desmarcado' : 'Marcado como colaborador')
+      cargarLlamadas()
+    } catch (error) {
+      toast.error('Error al actualizar colaborador')
+    }
   }
 
   const handleDelete = async (id: string) => {
@@ -445,6 +490,7 @@ export default function LlamadasFrioPage() {
       notas: '',
       estado: 'PENDIENTE',
       haLlamado: false,
+      esColaborador: false,
       fechaLlamada: '',
       fechaAgendada: '',
       duracion: '',
@@ -535,44 +581,194 @@ export default function LlamadasFrioPage() {
           </div>
         </div>
 
-        {/* Dashboard de Métricas Compacto */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-3">
-              <p className="text-xs text-slate-600 mb-1">Total</p>
-              <p className="text-xl font-bold text-slate-900">{estadisticas.total}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-3">
-              <p className="text-xs text-slate-600 mb-1">Realizadas</p>
-              <p className="text-xl font-bold text-green-700">{estadisticas.llamadasRealizadas}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="p-3">
-              <p className="text-xs text-slate-600 mb-1">Reuniones</p>
-              <p className="text-xl font-bold text-purple-700">{estadisticas.reunionesAgendadas}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
-            <CardContent className="p-3">
-              <p className="text-xs text-slate-600 mb-1">Conversión</p>
-              <p className="text-xl font-bold text-indigo-700">{estadisticas.tasaConversion.toFixed(1)}%</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-3">
-              <p className="text-xs text-slate-600 mb-1">Info</p>
-              <p className="text-xl font-bold text-blue-600">{estadisticas.solicitaInfo}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-yellow-50 border-yellow-200">
-            <CardContent className="p-3">
-              <p className="text-xs text-slate-600 mb-1">Pendientes</p>
-              <p className="text-xl font-bold text-yellow-700">{estadisticas.pendientes}</p>
-            </CardContent>
-          </Card>
+        {/* Dashboard de Métricas Avanzadas */}
+        <div className="space-y-4">
+          {/* Métricas Principales */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs text-slate-600">Total</p>
+                  <Users className="h-4 w-4 text-blue-600" />
+                </div>
+                <p className="text-xl font-bold text-slate-900">{estadisticas.total}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs text-slate-600">Realizadas</p>
+                  <Phone className="h-4 w-4 text-green-600" />
+                </div>
+                <p className="text-xl font-bold text-green-700">{estadisticas.llamadasRealizadas}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{estadisticas.llamadasHoy} hoy</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs text-slate-600">Reuniones</p>
+                  <Calendar className="h-4 w-4 text-purple-600" />
+                </div>
+                <p className="text-xl font-bold text-purple-700">{estadisticas.reunionesAgendadas}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{estadisticas.tasaReunion.toFixed(1)}% tasa</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs text-slate-600">Conversión</p>
+                  <TrendingUp className="h-4 w-4 text-indigo-600" />
+                </div>
+                <p className="text-xl font-bold text-indigo-700">{estadisticas.tasaConversion.toFixed(1)}%</p>
+                <p className="text-xs text-slate-500 mt-0.5">{estadisticas.llamadasExitosas} exitosas</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs text-slate-600">Solicitan Info</p>
+                  <Info className="h-4 w-4 text-blue-600" />
+                </div>
+                <p className="text-xl font-bold text-blue-600">{estadisticas.solicitaInfo}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-yellow-50 border-yellow-200">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs text-slate-600">Pendientes</p>
+                  <Clock className="h-4 w-4 text-yellow-600" />
+                </div>
+                <p className="text-xl font-bold text-yellow-700">{estadisticas.pendientes}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Métricas Avanzadas y Gráficas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Progreso hacia Objetivo */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Target className="h-4 w-4" />
+                  Progreso Objetivo
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600">{estadisticas.llamadasRealizadas} / {estadisticas.objetivo}</span>
+                    <span className="font-semibold text-slate-900">{estadisticas.progresoObjetivo.toFixed(0)}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500"
+                      style={{ width: `${Math.min(estadisticas.progresoObjetivo, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Colaboradores */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Handshake className="h-4 w-4" />
+                  Colaboradores
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-lg bg-gradient-to-br from-amber-50 to-amber-100">
+                    <Star className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900">{estadisticas.colaboradores}</p>
+                    <p className="text-xs text-slate-500">Trabajando juntos</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Duración Promedio */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Timer className="h-4 w-4" />
+                  Duración Promedio
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-lg bg-gradient-to-br from-purple-50 to-purple-100">
+                    <Activity className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {Math.floor(estadisticas.duracionPromedio / 60)}m {estadisticas.duracionPromedio % 60}s
+                    </p>
+                    <p className="text-xs text-slate-500">Por llamada</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Valor Estimado */}
+            {estadisticas.valorEstimadoTotal > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Valor Estimado
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-lg bg-gradient-to-br from-green-50 to-green-100">
+                      <TrendingUp className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-slate-900">
+                        {estadisticas.valorEstimadoTotal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
+                      </p>
+                      <p className="text-xs text-slate-500">Potencial</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Gráfica de Progreso Semanal */}
+            <Card className="md:col-span-2 lg:col-span-4">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Actividad Semanal
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-end gap-2 h-32">
+                  <div className="flex-1 flex flex-col items-center gap-1">
+                    <div 
+                      className="w-full bg-gradient-to-t from-blue-500 to-indigo-600 rounded-t transition-all duration-500"
+                      style={{ height: `${(estadisticas.llamadasSemana / Math.max(estadisticas.llamadasSemana, 1)) * 100}%` }}
+                    />
+                    <span className="text-xs text-slate-600 font-medium">{estadisticas.llamadasSemana}</span>
+                    <span className="text-xs text-slate-500">Esta semana</span>
+                  </div>
+                  <div className="flex-1 flex flex-col items-center gap-1">
+                    <div 
+                      className="w-full bg-gradient-to-t from-green-500 to-emerald-600 rounded-t transition-all duration-500"
+                      style={{ height: `${(estadisticas.llamadasHoy / Math.max(estadisticas.llamadasSemana, 1)) * 100}%` }}
+                    />
+                    <span className="text-xs text-slate-600 font-medium">{estadisticas.llamadasHoy}</span>
+                    <span className="text-xs text-slate-500">Hoy</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Búsqueda y Filtros Mejorados */}
@@ -590,74 +786,91 @@ export default function LlamadasFrioPage() {
                 />
               </div>
 
-              {/* Filtros como Chips */}
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium text-slate-700">Filtros:</span>
-                
-                {/* Filtro Código Postal con Zona */}
-                <select
-                  value={filtroCodigoPostal}
-                  onChange={(e) => setFiltroCodigoPostal(e.target.value)}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-blue-200 bg-white focus:border-blue-400 focus:outline-none"
-                >
-                  <option value="">📍 Todas las zonas</option>
-                  {filtros.codigosPostales.map(cp => (
-                    <option key={cp} value={cp}>
-                      {getCodigoPostalConZona(cp)}
-                    </option>
-                  ))}
-                </select>
+              {/* Filtros Responsive */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium text-slate-700 hidden sm:inline">Filtros:</span>
+                  
+                  {/* Filtro Código Postal con Zona - Responsive */}
+                  <div className="relative flex-1 min-w-[150px] sm:flex-initial sm:min-w-0">
+                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                    <select
+                      value={filtroCodigoPostal}
+                      onChange={(e) => setFiltroCodigoPostal(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-blue-200 bg-white focus:border-blue-400 focus:outline-none"
+                    >
+                      <option value="">Todas las zonas</option>
+                      {filtros.codigosPostales.map(cp => (
+                        <option key={cp} value={cp}>
+                          {getCodigoPostalConZona(cp)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Filtro Agencia */}
-                <select
-                  value={filtroAgencia}
-                  onChange={(e) => setFiltroAgencia(e.target.value)}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-blue-200 bg-white focus:border-blue-400 focus:outline-none"
-                >
-                  <option value="">🏢 Todas las agencias</option>
-                  {filtros.agencias.map(ag => (
-                    <option key={ag} value={ag}>{ag}</option>
-                  ))}
-                </select>
+                  {/* Filtro Agencia - Responsive */}
+                  <div className="relative flex-1 min-w-[150px] sm:flex-initial sm:min-w-0">
+                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                    <select
+                      value={filtroAgencia}
+                      onChange={(e) => setFiltroAgencia(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-blue-200 bg-white focus:border-blue-400 focus:outline-none"
+                    >
+                      <option value="">Todas las agencias</option>
+                      {filtros.agencias.map(ag => (
+                        <option key={ag} value={ag}>{ag}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Filtro Resultado */}
-                <select
-                  value={filtroResultado}
-                  onChange={(e) => setFiltroResultado(e.target.value)}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-blue-200 bg-white focus:border-blue-400 focus:outline-none"
-                >
-                  <option value="">📊 Todos los resultados</option>
-                  <option value="REUNION">✓ Reunión</option>
-                  <option value="SOLICITA_INFO">ℹ️ Solicita Info</option>
-                  <option value="NO_INTERES">✗ No Interés</option>
-                  <option value="NO_CONTESTA">📞 No Contesta</option>
-                  <option value="RECHAZADA">🚫 Rechazada</option>
-                </select>
+                  {/* Filtro Resultado */}
+                  <div className="relative flex-1 min-w-[150px] sm:flex-initial sm:min-w-0">
+                    <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                    <select
+                      value={filtroResultado}
+                      onChange={(e) => setFiltroResultado(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-blue-200 bg-white focus:border-blue-400 focus:outline-none"
+                    >
+                      <option value="">Todos los resultados</option>
+                      <option value="REUNION">Reunión</option>
+                      <option value="SOLICITA_INFO">Solicita Info</option>
+                      <option value="NO_INTERES">No Interés</option>
+                      <option value="NO_CONTESTA">No Contesta</option>
+                      <option value="RECHAZADA">Rechazada</option>
+                    </select>
+                  </div>
 
-                {/* Filtro Estado */}
-                <select
-                  value={filtroEstado}
-                  onChange={(e) => setFiltroEstado(e.target.value)}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-blue-200 bg-white focus:border-blue-400 focus:outline-none"
-                >
-                  <option value="">🔄 Todos los estados</option>
-                  <option value="PENDIENTE">⏳ Pendiente</option>
-                  <option value="LLAMADA_REALIZADA">📞 Llamada Realizada</option>
-                  <option value="REUNION_AGENDADA">📅 Reunión Agendada</option>
-                  <option value="SOLICITA_INFO">ℹ️ Solicita Info</option>
-                  <option value="NO_INTERESADO">✗ No Interesado</option>
-                </select>
+                  {/* Filtro Estado */}
+                  <div className="relative flex-1 min-w-[150px] sm:flex-initial sm:min-w-0">
+                    <Activity className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                    <select
+                      value={filtroEstado}
+                      onChange={(e) => setFiltroEstado(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-blue-200 bg-white focus:border-blue-400 focus:outline-none"
+                    >
+                      <option value="">Todos los estados</option>
+                      <option value="PENDIENTE">Pendiente</option>
+                      <option value="LLAMADA_REALIZADA">Llamada Realizada</option>
+                      <option value="REUNION_AGENDADA">Reunión Agendada</option>
+                      <option value="SOLICITA_INFO">Solicita Info</option>
+                      <option value="NO_INTERESADO">No Interesado</option>
+                    </select>
+                  </div>
 
-                {/* Filtro Ha Llamado */}
-                <select
-                  value={filtroHaLlamado}
-                  onChange={(e) => setFiltroHaLlamado(e.target.value)}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-blue-200 bg-white focus:border-blue-400 focus:outline-none"
-                >
-                  <option value="">📋 Todas</option>
-                  <option value="true">✅ Llamadas Realizadas</option>
-                  <option value="false">⏸️ Sin Llamar</option>
-                </select>
+                  {/* Filtro Ha Llamado */}
+                  <div className="relative flex-1 min-w-[150px] sm:flex-initial sm:min-w-0">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                    <select
+                      value={filtroHaLlamado}
+                      onChange={(e) => setFiltroHaLlamado(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-blue-200 bg-white focus:border-blue-400 focus:outline-none"
+                    >
+                      <option value="">Todas</option>
+                      <option value="true">Llamadas Realizadas</option>
+                      <option value="false">Sin Llamar</option>
+                    </select>
+                  </div>
+                </div>
 
                 {/* Limpiar Filtros */}
                 {tieneFiltrosActivos && (
@@ -724,33 +937,45 @@ export default function LlamadasFrioPage() {
                 <table className="w-full">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Nombre</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Teléfono</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Agencia</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Zona</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Estado</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Acciones Rápidas</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Más</th>
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Nombre</th>
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase hidden sm:table-cell">Teléfono</th>
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase hidden md:table-cell">Agencia</th>
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase hidden lg:table-cell">Zona</th>
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Estado</th>
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase hidden xl:table-cell">Acciones</th>
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Más</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {llamadasFiltradas.map((llamada) => (
                       <tr key={llamada.id} className="hover:bg-blue-50/50 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-slate-900">{llamada.nombre}</div>
-                          {llamada.email && (
-                            <div className="text-xs text-slate-500">{llamada.email}</div>
+                        <td className="px-2 sm:px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {llamada.esColaborador && (
+                            <span title="Colaborador">
+                              <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                            </span>
                           )}
+                          <div>
+                              <div className="font-medium text-slate-900">{llamada.nombre}</div>
+                              {llamada.email && (
+                                <div className="text-xs text-slate-500 hidden sm:block">{llamada.email}</div>
+                              )}
+                              <a href={`tel:${llamada.telefono}`} className="text-blue-600 hover:text-blue-700 text-xs sm:hidden font-medium">
+                                {llamada.telefono}
+                              </a>
+                            </div>
+                          </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 sm:px-4 py-3 hidden sm:table-cell">
                           <a href={`tel:${llamada.telefono}`} className="text-blue-600 hover:text-blue-700 font-medium">
                             {llamada.telefono}
                           </a>
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-600">
+                        <td className="px-2 sm:px-4 py-3 text-sm text-slate-600 hidden md:table-cell">
                           {llamada.agencia || '-'}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 sm:px-4 py-3 hidden lg:table-cell">
                           {llamada.codigoPostal && (
                             <div className="text-sm">
                               <span className="font-medium">{llamada.codigoPostal}</span>
@@ -760,7 +985,7 @@ export default function LlamadasFrioPage() {
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 sm:px-4 py-3">
                           <div className="flex flex-wrap gap-1">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getEstadoColor(llamada.estado)}`}>
                               {llamada.estado.replace('_', ' ')}
@@ -770,14 +995,9 @@ export default function LlamadasFrioPage() {
                                 {llamada.resultado.replace('_', ' ')}
                               </span>
                             )}
-                            {!llamada.haLlamado && (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-300">
-                                Sin llamar
-                              </span>
-                            )}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 sm:px-4 py-3 hidden xl:table-cell">
                           {!llamada.haLlamado ? (
                             <div className="flex gap-1 flex-wrap">
                               <Button
@@ -788,7 +1008,7 @@ export default function LlamadasFrioPage() {
                                 title="Reunión agendada"
                               >
                                 <CheckCircle className="h-3 w-3 mr-1" />
-                                Reunión
+                                <span className="hidden 2xl:inline">Reunión</span>
                               </Button>
                               <Button
                                 size="sm"
@@ -798,7 +1018,7 @@ export default function LlamadasFrioPage() {
                                 title="Solicita información"
                               >
                                 <Info className="h-3 w-3 mr-1" />
-                                Info
+                                <span className="hidden 2xl:inline">Info</span>
                               </Button>
                               <Button
                                 size="sm"
@@ -808,15 +1028,24 @@ export default function LlamadasFrioPage() {
                                 title="No hay interés"
                               >
                                 <Ban className="h-3 w-3 mr-1" />
-                                No
+                                <span className="hidden 2xl:inline">No</span>
                               </Button>
                             </div>
                           ) : (
                             <span className="text-xs text-green-600">✓ Llamada realizada</span>
                           )}
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-1">
+                        <td className="px-2 sm:px-4 py-3">
+                          <div className="flex gap-1 items-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggleColaborador(llamada)}
+                              className={`h-7 w-7 p-0 ${llamada.esColaborador ? 'text-amber-500' : 'text-slate-400'}`}
+                              title={llamada.esColaborador ? 'Quitar colaborador' : 'Marcar como colaborador'}
+                            >
+                              <Star className={`h-4 w-4 ${llamada.esColaborador ? 'fill-amber-500' : ''}`} />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -854,12 +1083,28 @@ export default function LlamadasFrioPage() {
                     {/* Header */}
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-slate-900 mb-1">{llamada.nombre}</h3>
+                        <div className="flex items-center gap-2 mb-1">
+                          {llamada.esColaborador && (
+                            <span title="Colaborador">
+                              <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                            </span>
+                          )}
+                          <h3 className="font-semibold text-slate-900">{llamada.nombre}</h3>
+                        </div>
                         <a href={`tel:${llamada.telefono}`} className="text-blue-600 hover:text-blue-700 text-sm font-medium">
                           {llamada.telefono}
                         </a>
                       </div>
                       <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleColaborador(llamada)}
+                          className={`h-7 w-7 p-0 ${llamada.esColaborador ? 'text-amber-500' : 'text-slate-400'}`}
+                          title={llamada.esColaborador ? 'Quitar colaborador' : 'Marcar como colaborador'}
+                        >
+                          <Star className={`h-4 w-4 ${llamada.esColaborador ? 'fill-amber-500' : ''}`} />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1244,6 +1489,25 @@ export default function LlamadasFrioPage() {
                     placeholder="Notas adicionales..."
                   />
                 </div>
+
+                {/* Checkbox Colaborador */}
+                {editingItem && (
+                  <div className="border-t pt-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.esColaborador}
+                        onChange={(e) => setFormData({ ...formData, esColaborador: e.target.checked })}
+                        className="rounded w-4 h-4"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Star className={`h-4 w-4 ${formData.esColaborador ? 'text-amber-500 fill-amber-500' : 'text-slate-400'}`} />
+                        <span className="text-sm font-medium text-slate-700">Colaborador (Ya trabajamos juntos)</span>
+                      </div>
+                    </label>
+                    <p className="text-xs text-slate-500 mt-1 ml-6">Marca esta opción si ya has trabajado con este contacto</p>
+                  </div>
+                )}
 
                 <div className="flex gap-3 pt-4">
                   <Button

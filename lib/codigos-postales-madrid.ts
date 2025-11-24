@@ -1,4 +1,4 @@
-// Mapeo de códigos postales de Madrid a zonas/barrios
+// Mapeo completo de códigos postales de Madrid a zonas/barrios
 export const codigosPostalesMadrid: Record<string, string> = {
   '28001': 'Centro (Sol, Gran Vía)',
   '28002': 'Salamanca',
@@ -19,7 +19,10 @@ export const codigosPostalesMadrid: Record<string, string> = {
   '28019': 'Carabanchel',
   '28020': 'Tetuán',
   '28021': 'Villaverde',
+  '28022': 'Pozuelo de Alarcón',
+  '28023': 'Pozuelo de Alarcón',
   '28024': 'Carabanchel',
+  '28025': 'Carabanchel',
   '28026': 'Usera',
   '28027': 'Villaverde',
   '28028': 'Chamartín',
@@ -42,6 +45,7 @@ export const codigosPostalesMadrid: Record<string, string> = {
   '28046': 'Chamartín',
   '28047': 'Villaverde',
   '28048': 'Fuencarral-El Pardo',
+  '28049': 'Moncloa-Aravaca',
   '28050': 'Fuencarral-El Pardo',
   '28051': 'Villaverde',
   '28052': 'Villaverde',
@@ -51,14 +55,21 @@ export const codigosPostalesMadrid: Record<string, string> = {
   '28080': 'Madrid (General)',
 }
 
+// Función para obtener zona desde código postal
 export function getZonaFromCodigoPostal(cp: string | null | undefined): string {
   if (!cp) return ''
-  return codigosPostalesMadrid[cp] || cp
+  return codigosPostalesMadrid[cp] || `CP ${cp}`
 }
 
+// Función para obtener código postal con zona formateado
 export function getCodigoPostalConZona(cp: string | null | undefined): string {
   if (!cp) return ''
   const zona = codigosPostalesMadrid[cp]
   return zona ? `${cp} - ${zona}` : cp
 }
 
+// Función para obtener solo la zona (sin código postal)
+export function getSoloZona(cp: string | null | undefined): string {
+  if (!cp) return ''
+  return codigosPostalesMadrid[cp] || ''
+}

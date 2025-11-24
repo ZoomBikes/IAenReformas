@@ -50,6 +50,7 @@ export async function PUT(
       interesado,
       valorEstimado,
       siguienteAccion,
+      esColaborador,
       registrarLlamada // Flag para registrar nueva llamada en historial
     } = body
 
@@ -91,6 +92,7 @@ export async function PUT(
       ...(interesado !== undefined && { interesado }),
       ...(valorEstimado !== undefined && { valorEstimado }),
       ...(siguienteAccion !== undefined && { siguienteAccion: siguienteAccion?.trim() || null }),
+      ...(esColaborador !== undefined && { esColaborador }),
       ...(historialLlamadas.length > 0 && { historialLlamadas })
     }
 

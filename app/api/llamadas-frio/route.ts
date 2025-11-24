@@ -64,6 +64,42 @@ export async function GET(request: NextRequest) {
       where: { resultado: 'NO_INTERES' } 
     })
     const pendientes = await prisma.llamadaFrio.count({ where: { estado: 'PENDIENTE', haLlamado: false } })
+    const colaboradores = await prisma.llamadaFrio.count({ where: { esColaborador: true } })
+    
+    // Métricas avanzadas
+    const hoy = new Date()
+    hoy.setHours(0, 0, 0, 0)
+    const llamadasHoy = await prisma.llamadaFrio.count({ 
+      where: { 
+        haLlamado: true,
+        fechaLlamada: { gte: hoy }
+      } 
+    })
+    
+    const estaSemana = new Date()
+    estaSemana.setDate(estaSemana.getDate() - 7)
+    const llamadasSemana = await prisma.llamadaFrio.count({ 
+      where: { 
+        haLlamado: true,
+        fechaLlamada: { gte: estaSemana }
+      } 
+    })
+    
+    // Promedio de duración de llamadas
+    const llamadasConDuracion = await prisma.llamadaFrio.findMany({
+      where: { duracion: { not: null } },
+      select: { duracion: true }
+    })
+    const duracionPromedio = llamadasConDuracion.length > 0
+      ? Math.round(llamadasConDuracion.reduce((sum: number, l: any) => sum + (l.duracion || 0), 0) / llamadasConDuracion.length)
+      : 0
+    
+    // Valor estimado total
+    const llamadasConValor = await prisma.llamadaFrio.findMany({
+      where: { valorEstimado: { not: null } },
+      select: { valorEstimado: true }
+    })
+    const valorEstimadoTotal = llamadasConValor.reduce((sum: number, l: any) => sum + (l.valorEstimado || 0), 0)
 
     // Calcular tasa de conversión
     const tasaConversion = llamadasRealizadas > 0 
@@ -73,6 +109,14 @@ export async function GET(request: NextRequest) {
     const tasaReunion = llamadasRealizadas > 0 
       ? (reunionesAgendadas / llamadasRealizadas) * 100 
       : 0
+      
+    const llamadasPorReunion = reunionesAgendadas > 0 
+      ? Number((llamadasRealizadas / reunionesAgendadas).toFixed(1))
+      : 0
+      
+    // Progreso hacia objetivo (500 llamadas)
+    const objetivo = 500
+    const progresoObjetivo = (llamadasRealizadas / objetivo) * 100
 
     // Obtener códigos postales únicos
     const codigosPostales = await prisma.llamadaFrio.findMany({
@@ -99,11 +143,16 @@ export async function GET(request: NextRequest) {
         solicitaInfo,
         noInteres,
         pendientes,
+        colaboradores,
+        llamadasHoy,
+        llamadasSemana,
+        duracionPromedio,
+        valorEstimadoTotal,
         tasaConversion: Number(tasaConversion.toFixed(2)),
         tasaReunion: Number(tasaReunion.toFixed(2)),
-        llamadasPorReunion: reunionesAgendadas > 0 
-          ? Number((llamadasRealizadas / reunionesAgendadas).toFixed(1))
-          : 0
+        llamadasPorReunion,
+        progresoObjetivo: Number(progresoObjetivo.toFixed(1)),
+        objetivo
       },
       filtros: {
         codigosPostales: codigosPostales.map((cp: any) => cp.codigoPostal).filter(Boolean).sort(),
