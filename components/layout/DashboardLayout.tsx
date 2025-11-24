@@ -189,12 +189,28 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         {/* Top bar */}
         <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm border-b border-blue-100/50 shadow-sm">
           <div className="flex items-center justify-between px-4 md:px-6 py-4">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-lg hover:bg-blue-50/50 transition-colors"
-            >
-              <Menu className="h-6 w-6 text-slate-700" />
-            </button>
+            {/* Mobile: Hamburger + REHABITECA */}
+            <div className="flex items-center gap-3 lg:hidden">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="p-2 rounded-lg hover:bg-blue-50/50 transition-colors"
+              >
+                <Menu className="h-6 w-6 text-slate-700" />
+              </button>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                REHABITECA
+              </h1>
+            </div>
+            
+            {/* Desktop: Logo */}
+            <div className="hidden lg:flex items-center gap-2">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                <LayoutDashboard className="h-6 w-6 text-white" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                IA Reformas
+              </span>
+            </div>
             
             {/* Quick Search */}
             <div className="hidden md:flex flex-1 max-w-lg mx-4">
@@ -219,13 +235,24 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-3 p-2 rounded-xl hover:bg-blue-50/50 transition-colors"
+                  className="flex items-center gap-2 lg:gap-3 p-2 rounded-xl hover:bg-blue-50/50 transition-colors"
                 >
-                  <div className="text-right hidden sm:block">
+                  {/* Mobile: REHABITECA + Icono */}
+                  <div className="lg:hidden flex items-center gap-2">
+                    <span className="text-sm font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                      REHABITECA
+                    </span>
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-semibold shadow-lg shadow-blue-500/30 text-xs">
+                      UD
+                    </div>
+                  </div>
+                  
+                  {/* Desktop: Usuario Demo + Icono */}
+                  <div className="text-right hidden lg:block">
                     <p className="text-sm font-medium text-slate-900">Usuario Demo</p>
                     <p className="text-xs text-slate-500">Plan Profesional</p>
                   </div>
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-semibold shadow-lg shadow-blue-500/30">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-semibold shadow-lg shadow-blue-500/30 hidden lg:flex">
                     UD
                   </div>
                 </button>
