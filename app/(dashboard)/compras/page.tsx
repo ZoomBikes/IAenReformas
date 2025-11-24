@@ -456,8 +456,8 @@ export default function ComprasPage() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="glass-white border-purple-200/50 rounded-2xl">
-            <CardHeader>
+        <Card className="glass-white border-purple-200/50 rounded-2xl">
+          <CardHeader>
               <CardTitle>Contratos de Subcontratas</CardTitle>
               <CardDescription>{contratosFiltrados.length} contratos</CardDescription>
             </CardHeader>

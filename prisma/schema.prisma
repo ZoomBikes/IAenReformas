@@ -118,6 +118,7 @@ model Cliente {
   presupuestos Presupuesto[]
   obras        Obra[]
   leads        Lead[]
+  llamadasFrio LlamadaFrio[]
 
   @@map("clientes")
 }
@@ -254,6 +255,7 @@ model Lead {
   cliente       Cliente?   @relation(fields: [clienteId], references: [id], onDelete: SetNull)
   campanaId     String?
   campana       Campana?   @relation(fields: [campanaId], references: [id], onDelete: SetNull)
+  llamadasFrio  LlamadaFrio[]
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
@@ -489,4 +491,52 @@ model FacturaTrabajador {
   updatedAt        DateTime  @updatedAt
 
   @@map("facturas_trabajadores")
+}
+
+// ========== MÓDULO LLAMADAS EN FRÍO ==========
+
+enum EstadoLlamada {
+  PENDIENTE
+  EN_PROGRESO
+  COMPLETADA
+  NO_CONTESTA
+  RECHAZADA
+  INTERESADO
+  NO_INTERESADO
+  AGENDADA
+}
+
+model LlamadaFrio {
+  id              String        @id @default(cuid())
+  nombre          String        // Nombre del contacto
+  telefono        String        // Teléfono de contacto
+  email           String?       // Email (opcional)
+  empresa         String?       // Empresa (opcional)
+  direccion       String?       // Dirección (opcional)
+  notas           String?       @db.Text // Notas adicionales
+  
+  // Estado y seguimiento
+  estado          EstadoLlamada @default(PENDIENTE)
+  fechaLlamada    DateTime?     // Fecha/hora de la llamada realizada
+  fechaAgendada   DateTime?     // Si se agendó una llamada futura
+  duracion        Int?          // Duración en segundos
+  
+  // Resultados de la llamada
+  resultado       String?       @db.Text // Resultado de la llamada
+  interesado      Boolean?      // Si mostró interés
+  valorEstimado   Float?        // Valor estimado si mostró interés
+  siguienteAccion String?       @db.Text // Próxima acción a realizar
+  
+  // Relación con cliente/lead (si se convierte)
+  clienteId       String?
+  cliente         Cliente?      @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  leadId          String?
+  lead            Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  
+  // Metadata
+  origen          String?       // Origen del CSV o importación
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("llamadas_frio")
 }

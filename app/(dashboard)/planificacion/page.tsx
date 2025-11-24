@@ -164,9 +164,9 @@ export default function PlanificacionPage() {
                 setShowModal(true)
               }}
             >
-              <Plus className="h-5 w-5 mr-2" />
-              Nueva Tarea
-            </Button>
+            <Plus className="h-5 w-5 mr-2" />
+            Nueva Tarea
+          </Button>
             <Button 
               size="lg" 
               variant="outline"
@@ -303,7 +303,7 @@ export default function PlanificacionPage() {
                     </div>
                   </div>
                 ))}
-              </div>
+            </div>
             )}
           </CardContent>
         </Card>
@@ -334,7 +334,7 @@ export default function PlanificacionPage() {
                       )}
                     </div>
                   ))}
-                </div>
+              </div>
               )}
             </CardContent>
           </Card>
@@ -363,7 +363,7 @@ export default function PlanificacionPage() {
                       )}
                     </div>
                   ))}
-                </div>
+              </div>
               )}
             </CardContent>
           </Card>
@@ -386,7 +386,7 @@ export default function PlanificacionPage() {
                       <p className="text-xs text-slate-600 mt-1">{tarea.obra.nombre}</p>
                     </div>
                   ))}
-                </div>
+              </div>
               )}
             </CardContent>
           </Card>

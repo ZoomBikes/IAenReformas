@@ -230,15 +230,15 @@ export default function CostesPage() {
             {loading ? (
               <p className="text-center py-8 text-slate-500">Cargando...</p>
             ) : metricas.obras.length === 0 ? (
-              <div className="flex items-center justify-center py-12 text-center">
-                <div>
-                  <DollarSign className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">No hay obras activas</p>
-                  <p className="text-sm text-slate-400 mt-1">
-                    Las métricas aparecerán cuando tengas obras en progreso
-                  </p>
-                </div>
+            <div className="flex items-center justify-center py-12 text-center">
+              <div>
+                <DollarSign className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                <p className="text-slate-500">No hay obras activas</p>
+                <p className="text-sm text-slate-400 mt-1">
+                  Las métricas aparecerán cuando tengas obras en progreso
+                </p>
               </div>
+            </div>
             ) : (
               <div className="space-y-3">
                 {metricas.obras.map((obra) => {
@@ -375,8 +375,8 @@ export default function CostesPage() {
                           <p className="font-bold text-slate-900">€{pago.importe.toFixed(2)}</p>
                           <p className="text-xs text-slate-500">
                             {new Date(pago.fecha).toLocaleDateString('es-ES')}
-                          </p>
-                        </div>
+                </p>
+              </div>
                       </div>
                     </div>
                   ))}

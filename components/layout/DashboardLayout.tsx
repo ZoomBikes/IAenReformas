@@ -29,7 +29,8 @@ import {
   CheckCircle2,
   Plus,
   Search,
-  Receipt
+  Receipt,
+  Phone
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -58,6 +59,7 @@ const navigation: NavSection[] = [
     items: [
       { name: 'CRM', href: '/crm', icon: Users },
       { name: 'Planificación', href: '/planificacion', icon: Calendar },
+      { name: 'Llamadas en Frío', href: '/llamadas-frio', icon: Phone },
     ]
   },
   {
