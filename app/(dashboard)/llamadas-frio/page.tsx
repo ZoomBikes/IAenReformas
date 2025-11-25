@@ -39,9 +39,13 @@ import {
   Eye,
   EyeOff,
   Handshake,
-  Sparkles
+  Sparkles,
+  FileAudio,
+  MessageSquareText,
+  Waves
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { AudioCapture } from '@/components/call/AudioCapture'
 
 interface LlamadaFrio {
   id: string
@@ -67,6 +71,13 @@ interface LlamadaFrio {
   historialLlamadas?: any[]
   origen?: string
   createdAt: string
+  audioUrl?: string
+  audioDuration?: number
+  transcripcion?: { texto?: string; segmentos?: any[] }
+  resumenTranscripcion?: string
+  sentimientoGlobal?: string
+  palabrasClave?: Array<{ palabra: string; total: number }>
+  analiticaConversacion?: any
 }
 
 interface Estadisticas {
@@ -131,9 +142,12 @@ export default function LlamadasFrioPage() {
   const [showModal, setShowModal] = useState(false)
   const [showQuickActionModal, setShowQuickActionModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
+  const [showAudioModal, setShowAudioModal] = useState(false)
   const [editingItem, setEditingItem] = useState<LlamadaFrio | null>(null)
   const [quickActionItem, setQuickActionItem] = useState<LlamadaFrio | null>(null)
   const [quickActionResult, setQuickActionResult] = useState<string>('')
+  const [audioTarget, setAudioTarget] = useState<LlamadaFrio | null>(null)
+  const [transcribingId, setTranscribingId] = useState<string | null>(null)
   const [importando, setImportando] = useState(false)
   const [savingQuick, setSavingQuick] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -161,6 +175,11 @@ export default function LlamadasFrioPage() {
     siguienteAccion: ''
   })
 
+  const handleOpenAudioModal = (llamada: LlamadaFrio) => {
+    setAudioTarget(llamada)
+    setShowAudioModal(true)
+  }
+
   // Búsqueda en tiempo real con debounce
   useEffect(() => {
     if (searchTimeoutRef.current) {
@@ -180,6 +199,15 @@ export default function LlamadasFrioPage() {
     cargarLlamadas()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroEstado, filtroCodigoPostal, filtroAgencia, filtroResultado, filtroHaLlamado])
+
+  useEffect(() => {
+    if (audioTarget) {
+      const updated = llamadas.find(l => l.id === audioTarget.id)
+      if (updated) {
+        setAudioTarget(updated)
+      }
+    }
+  }, [llamadas])
 
   const cargarLlamadas = async () => {
     setLoading(true)
@@ -209,6 +237,16 @@ export default function LlamadasFrioPage() {
     setQuickActionItem(llamada)
     setQuickActionResult(resultado)
     setShowQuickActionModal(true)
+  }
+
+  const handleAudioUploaded = () => {
+    cargarLlamadas()
+    toast.success('Audio almacenado')
+  }
+
+  const handleAudioTranscribed = () => {
+    cargarLlamadas()
+    toast.success('Transcripción lista')
   }
 
   const handleSaveQuickAction = async () => {
@@ -1006,13 +1044,23 @@ export default function LlamadasFrioPage() {
                           )}
                         </td>
                         <td className="px-2 sm:px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-wrap gap-1 items-center">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getEstadoColor(llamada.estado)}`}>
                               {llamada.estado.replace('_', ' ')}
                             </span>
                             {llamada.resultado && (
                               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getResultadoColor(llamada.resultado)}`}>
                                 {llamada.resultado.replace('_', ' ')}
+                              </span>
+                            )}
+                            {llamada.audioUrl && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
+                                <Waves className="h-3 w-3" /> Audio
+                              </span>
+                            )}
+                            {llamada.transcripcion?.texto && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                                <MessageSquareText className="h-3 w-3" /> Texto
                               </span>
                             )}
                           </div>
@@ -1057,6 +1105,15 @@ export default function LlamadasFrioPage() {
                         </td>
                         <td className="px-2 sm:px-4 py-3">
                           <div className="flex gap-1 items-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenAudioModal(llamada)}
+                              className={llamada.audioUrl ? 'text-blue-600' : 'text-slate-400'}
+                              title={llamada.audioUrl ? 'Escuchar / transcribir' : 'Subir audio'}
+                            >
+                              <FileAudio className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1116,6 +1173,14 @@ export default function LlamadasFrioPage() {
                         </a>
                       </div>
                       <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenAudioModal(llamada)}
+                          className={llamada.audioUrl ? 'text-blue-600' : 'text-slate-400'}
+                        >
+                          <FileAudio className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1211,10 +1276,111 @@ export default function LlamadasFrioPage() {
                         ✓ Llamada realizada {llamada.fechaLlamada && new Date(llamada.fechaLlamada).toLocaleDateString('es-ES')}
                       </div>
                     )}
+
+                    {llamada.resumenTranscripcion && (
+                      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3 space-y-2">
+                        <div className="flex items-center justify-between text-xs uppercase text-slate-500">
+                          <span>Resumen de la llamada</span>
+                          {llamada.sentimientoGlobal && (
+                            <span className="font-semibold text-slate-700">
+                              Sentimiento: {llamada.sentimientoGlobal}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-slate-700">{llamada.resumenTranscripcion}</p>
+                        {llamada.palabrasClave && (
+                          <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                            {llamada.palabrasClave.slice(0, 4).map((keyword, index) => (
+                              <span key={`${llamada.id}-kw-${index}`} className="px-2 py-0.5 rounded-full bg-white border border-slate-200">
+                                #{keyword.palabra}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Modal Audio y Transcripción */}
+        {showAudioModal && audioTarget && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <Card className="w-full max-w-3xl my-6">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">Audio y transcripción</CardTitle>
+                    <CardDescription>
+                      {audioTarget.nombre} • {audioTarget.telefono}
+                    </CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setShowAudioModal(false)}>
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-4">
+                  <AudioCapture
+                    llamadaId={audioTarget.id}
+                    existingAudio={audioTarget.audioUrl || null}
+                    existingDuration={audioTarget.audioDuration ?? null}
+                    onUploaded={handleAudioUploaded}
+                    onTranscribed={handleAudioTranscribed}
+                  />
+                </div>
+                <div className="space-y-4">
+                  {audioTarget.resumenTranscripcion ? (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+                      <div className="flex items-center justify-between text-xs uppercase text-slate-500">
+                        <span>Resumen</span>
+                        {audioTarget.sentimientoGlobal && (
+                          <span className="font-semibold text-slate-700">
+                            Sentimiento: {audioTarget.sentimientoGlobal}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-slate-700">{audioTarget.resumenTranscripcion}</p>
+                      {audioTarget.palabrasClave && (
+                        <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                          {audioTarget.palabrasClave.map((keyword, index) => (
+                            <span key={`modal-kw-${index}`} className="px-2 py-0.5 rounded-full bg-white border border-slate-200">
+                              #{keyword.palabra} ({keyword.total})
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-sm text-slate-500">
+                      Transcribe la llamada para ver el resumen y las analíticas.
+                    </div>
+                  )}
+
+                  {audioTarget.transcripcion?.segmentos && audioTarget.transcripcion.segmentos.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                        <MessageSquareText className="h-4 w-4" /> Segmentos
+                      </p>
+                      <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
+                        {audioTarget.transcripcion.segmentos.slice(0, 25).map((segmento: any, index: number) => (
+                          <div key={`segmento-${index}`} className="rounded-lg border border-slate-100 bg-white p-2 text-xs text-slate-600">
+                            <p className="font-semibold text-slate-800">
+                              {segmento?.timestamp ? `${segmento.timestamp[0].toFixed(1)}s` : index + 1}
+                            </p>
+                            <p>{segmento?.text || segmento?.texto || ''}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 

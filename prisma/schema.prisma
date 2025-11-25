@@ -552,6 +552,15 @@ model LlamadaFrio {
   // Colaborador
   esColaborador   Boolean       @default(false) // Si ya trabajamos juntos
   
+  // Audio y transcripción
+  audioUrl               String?
+  audioDuration          Int?
+  transcripcion          Json?
+  resumenTranscripcion   String? @db.Text
+  sentimientoGlobal      String?
+  palabrasClave          Json?
+  analiticaConversacion  Json?
+
   // Metadata
   origen          String?       // Origen del CSV o importación
   createdAt       DateTime      @default(now())
