@@ -16,9 +16,15 @@ export async function POST(request: NextRequest) {
     const extension = audio.name?.split('.').pop() || 'webm'
     const filename = `llamadas-audio/${llamadaId}-${Date.now()}.${extension}`
 
+    const token = process.env.BLOB_READ_WRITE_TOKEN
+    if (!token) {
+      throw new Error('BLOB_READ_WRITE_TOKEN no configurado en las variables de entorno')
+    }
+
     const blob = await put(filename, audio, {
       access: 'public',
-      addRandomSuffix: false
+      addRandomSuffix: false,
+      token
     })
 
     await prisma.llamadaFrio.update({
